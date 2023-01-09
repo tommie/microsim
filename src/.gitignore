@@ -1,0 +1,9 @@
+lib*.a
+*.cod
+*.hex
+*.lst
+*.o
+*.wasm
+
+tests.js
+
