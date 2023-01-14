@@ -24,7 +24,7 @@ namespace sim::core {
 
   }
 
-  sim::core::Status load_ihex(std::istream &in, std::function<sim::core::Status(uint32_t, std::u8string_view)> load) {
+  sim::util::Status load_ihex(std::istream &in, std::function<sim::util::Status(uint32_t, std::u8string_view)> load) {
     for (std::array<char, 256> buf; in.getline(&buf[0], buf.size());) {
       std::string line(&buf[0]);
 
@@ -78,7 +78,7 @@ namespace sim::core {
         break;
 
       case 1:
-        return sim::core::Status();
+        return sim::util::Status();
 
       case 4:
         // Ignored.
@@ -89,7 +89,7 @@ namespace sim::core {
       }
     }
 
-    return sim::core::Status(std::make_error_code(std::errc::invalid_argument), "missing EOF record");
+    return sim::util::Status(std::make_error_code(std::errc::invalid_argument), "missing EOF record");
   }
 
 }  // namespace sim::core

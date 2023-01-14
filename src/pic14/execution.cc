@@ -1,9 +1,9 @@
 #include "execution.h"
 
-#include "../core/status.h"
+#include "../util/status.h"
 #include "errors.h"
 
-using sim::core::Status;
+using sim::util::Status;
 
 namespace sim::pic14::internal {
 

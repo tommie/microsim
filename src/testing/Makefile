@@ -12,4 +12,4 @@ clean:
 libtesting.a: testing.o
 	$(AR) cr $@ $^
 
-testing.o: testing.cc testing.h ../core/status.h
+testing.o: testing.cc testing.h ../util/status.h

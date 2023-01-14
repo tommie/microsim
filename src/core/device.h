@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../core/status.h"
+#include "../util/status.h"
 
 namespace sim::core {
 
@@ -33,7 +33,7 @@ namespace sim::core {
     /// writing to a register that doesn't exist. The device should
     /// continue working as specified, but it is likely not working as
     /// the user intended.
-    virtual void invalid_internal_state(const sim::core::Status &status) {}
+    virtual void invalid_internal_state(const sim::util::Status &status) {}
 
     /// Invoked when a pin has changed state on the device.
     virtual void pin_changed(Pin* pin, PinChange change) {}

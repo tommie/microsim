@@ -12,6 +12,6 @@ clean:
 libcore.a: device.o ihex.o scheduler.o simulation.o
 	$(AR) cr $@ $^
 
-device.o: device.cc device.h
+device.o: device.cc device.h ../util/status.h
 
-ihex.o: ihex.cc ihex.h status.h
+ihex.o: ihex.cc ihex.h ../util/status.h

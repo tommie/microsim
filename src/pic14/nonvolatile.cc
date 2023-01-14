@@ -10,7 +10,7 @@ namespace sim::pic14::internal {
 
 namespace sim::pic14 {
 
-  sim::core::Status ICSP::load_program(uint16_t addr, std::u8string_view data) {
+  sim::util::Status ICSP::load_program(uint16_t addr, std::u8string_view data) {
     while (data.size() > 1) {
       if (addr < device->progmem.size()) {
         uint16_t end = std::min<uint16_t>(addr + data.size() / 2, device->progmem.size());
@@ -41,7 +41,7 @@ namespace sim::pic14 {
     return std::error_code{};
   }
 
-  sim::core::Status ICSP::load_data(uint16_t addr, std::u8string_view data) {
+  sim::util::Status ICSP::load_data(uint16_t addr, std::u8string_view data) {
     while (!data.empty()) {
       if (addr >= 0x2100 && addr < 0x2100 + device->eedata.size()) {
         uint16_t end = std::min<uint16_t>(addr + data.size(), 0x2100 + device->eedata.size());

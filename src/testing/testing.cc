@@ -36,7 +36,7 @@ namespace sim::testing {
     default_test_suite().register_test_case(this);
   }
 
-  sim::core::Status TestCase::operator()() {
+  sim::util::Status TestCase::operator()() {
     if (auto status = setUp(); !status.ok()) return status;
     run();
     return result_;

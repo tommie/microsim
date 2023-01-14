@@ -6,17 +6,17 @@
 #include <sstream>
 
 #include "../core/ihex.h"
-#include "../core/status.h"
 #include "../testing/testing.h"
+#include "../util/status.h"
 #include "p16f88x.h"
 
 template<typename Proc>
-sim::core::Status load_testdata_ihex(Proc *proc, std::string_view path) {
+sim::util::Status load_testdata_ihex(Proc *proc, std::string_view path) {
   auto icsp = proc->enter_icsp();
   std::ifstream ihex(path);
 
   if (!ihex) {
-    return sim::core::Status(std::error_code(errno, std::system_category()), path);
+    return sim::util::Status(std::error_code(errno, std::system_category()), path);
   }
 
   return sim::core::load_ihex(ihex, std::bind_front(&sim::pic14::ICSP::load_program, &icsp));
@@ -51,11 +51,11 @@ protected:
     }
   }
 
-  sim::core::Status setUp() override {
+  sim::util::Status setUp() override {
     if (auto status = load_testdata_ihex(&proc, firmware_); !status.ok()) {
       return status;
     }
-    return sim::core::Status();
+    return sim::util::Status();
   }
 
 private:

@@ -5,7 +5,7 @@
 #include <list>
 #include <string>
 
-#include "../core/status.h"
+#include "../util/status.h"
 
 namespace sim::testing {
 
@@ -13,14 +13,14 @@ namespace sim::testing {
 
   class TestReporter {
   public:
-    virtual void test_case_done(std::string_view name, const sim::core::Status &status) {}
+    virtual void test_case_done(std::string_view name, const sim::util::Status &status) {}
   };
 
   class StreamTestReporter : public TestReporter {
   public:
     explicit StreamTestReporter(std::ostream *out) : out_(out) {}
 
-    void test_case_done(std::string_view name, const sim::core::Status &status) override {
+    void test_case_done(std::string_view name, const sim::util::Status &status) override {
       if (status.ok()) {
         *out_ << "ok TEST " << name << std::endl;
       } else {
@@ -53,22 +53,22 @@ namespace sim::testing {
 
     virtual std::string_view name() const = 0;
 
-    sim::core::Status operator()();
+    sim::util::Status operator()();
 
   protected:
-    virtual sim::core::Status setUp() { return sim::core::Status(); }
+    virtual sim::util::Status setUp() { return sim::util::Status(); }
     virtual void run() = 0;
 
-    void fail(const sim::core::Status &status) {
+    void fail(const sim::util::Status &status) {
       if (result_.ok()) result_ = status;
     }
 
     void fail(std::string_view msg) {
-      if (result_.ok()) result_ = sim::core::Status(std::make_error_code(std::errc::broken_pipe), msg);
+      if (result_.ok()) result_ = sim::util::Status(std::make_error_code(std::errc::broken_pipe), msg);
     }
 
   private:
-    sim::core::Status result_;
+    sim::util::Status result_;
   };
 
 #define SIM_TEST_BASE(Name, TestCase, ...)                              \

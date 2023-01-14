@@ -5,7 +5,7 @@
 #include <string_view>
 #include <system_error>
 
-#include "../core/status.h"
+#include "../util/status.h"
 
 namespace sim::pic14 {
 
@@ -76,11 +76,11 @@ namespace sim::pic14 {
     /// (program memory, configuration words), little-endian is used
     /// when decoding. This can also program EEPROM data presented as
     /// 16-bit values where the top byte is discarded.
-    sim::core::Status load_program(uint16_t addr, std::u8string_view data);
+    sim::util::Status load_program(uint16_t addr, std::u8string_view data);
 
     /// Program data at the specified address. Data is represented as
     /// 8-bit values.
-    sim::core::Status load_data(uint16_t addr, std::u8string_view data);
+    sim::util::Status load_data(uint16_t addr, std::u8string_view data);
 
     ICSP(ICSP&&) = default;
     ICSP(const ICSP&) = delete;

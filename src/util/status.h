@@ -1,5 +1,5 @@
-#ifndef sim_core_status_h
-#define sim_core_status_h
+#ifndef sim_util_status_h
+#define sim_util_status_h
 
 #include <cstddef>
 #include <ostream>
@@ -8,7 +8,7 @@
 #include <system_error>
 #include <variant>
 
-namespace sim::core {
+namespace sim::util {
 
   class Status {
   public:
@@ -57,6 +57,6 @@ namespace sim::core {
     std::variant<T, Status> v_;
   };
 
-}  // namespace sim::core
+}  // namespace sim::util
 
-#endif  // sim_core_status_h
+#endif  // sim_util_status_h
