@@ -126,7 +126,10 @@ namespace sim::pic14::internal {
 
           case 0x0063:
             // sleep: to, pd
-            in_sleep = true;
+            if (!interrupt_mux().is_active()) {
+              in_sleep = true;
+              status.update_reset((1 << StatusReg::PD));
+            }
             break;
           }
           break;
