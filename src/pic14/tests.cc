@@ -73,7 +73,7 @@ protected:
   SIM_TEST_BASE(Name, ProcessorTestCase<sim::pic14::Proc>, Firmware)
 
 
-PROCESSOR_TEST(PortTest, P16F88X, "testdata/port.hex") {
+PROCESSOR_TEST(PortTest, P16F887, "testdata/port.hex") {
   pins["RB0"]->set_external(1);
 
   advance_until_sleep();
@@ -81,7 +81,7 @@ PROCESSOR_TEST(PortTest, P16F88X, "testdata/port.hex") {
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
 }
 
-PROCESSOR_TEST(ExtInterruptTest, P16F88X, "testdata/extint.hex") {
+PROCESSOR_TEST(ExtInterruptTest, P16F887, "testdata/extint.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0 before pin change");
@@ -93,7 +93,7 @@ PROCESSOR_TEST(ExtInterruptTest, P16F88X, "testdata/extint.hex") {
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after pin change");
 }
 
-PROCESSOR_TEST(GlobalInterruptTest, P16F88X, "testdata/gie.hex") {
+PROCESSOR_TEST(GlobalInterruptTest, P16F887, "testdata/gie.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0 before pin change");

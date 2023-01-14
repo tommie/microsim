@@ -1,6 +1,6 @@
 #include "p16f88x.h"
 
-namespace sim::pic14 {
+namespace sim::pic14::internal {
 
   std::u16string build_addrmap(uint16_t size) {
     std::u16string addrmap(size, 0);
@@ -23,12 +23,14 @@ namespace sim::pic14 {
     return addrmap;
   }
 
-  const std::u16string_view P16F88X::address_map() {
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  const std::u16string_view P16F88X<ProgSize, EEDataSize, NumPorts>::address_map() {
     static const std::u16string addrmap = build_addrmap(P16F88X::FILE_BUS_SIZE);
     return addrmap;
   }
 
-  P16F88X::P16F88X(core::DeviceListener *listener)
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener)
     : Execution(listener,
                 &fosc4_,
                 NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE},
@@ -51,7 +53,8 @@ namespace sim::pic14 {
         &executor_,
       }) {}
 
-  internal::DataBus P16F88X::build_data_bus() {
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {
     std::vector<internal::RegisterBackend*> backs;
     std::u8string backmap(FILE_BUS_SIZE, 0xFF);
 
@@ -65,7 +68,8 @@ namespace sim::pic14 {
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
 
-  std::vector<sim::core::PinDescriptor> P16F88X::build_pin_descrs() {
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  std::vector<sim::core::PinDescriptor> P16F88X<ProgSize, EEDataSize, NumPorts>::build_pin_descrs() {
     std::vector<sim::core::PinDescriptor> descrs;
 
     std::string name_buf("RA0");
@@ -88,10 +92,15 @@ namespace sim::pic14 {
     return descrs;
   }
 
-  sim::core::Advancement P16F88X::advance_to(const sim::core::SimulationLimit &limit) {
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
     auto adv = scheduler_.advance_to(limit);
     clock_scheduler_.advance_to(adv.at_tick);
     return adv;
   }
 
-} // namespace sim::pic14
+  // Template instantiations for specific processors.
+  template class P16F88X<4096, 256, 5>;
+  template class P16F88X<8192, 256, 5>;
+
+} // namespace sim::pic14::internal

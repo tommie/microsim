@@ -14,37 +14,45 @@
 
 namespace sim::pic14 {
 
-  class P16F88X : public internal::Execution {
-    static const uint16_t FILE_BUS_SIZE = 0x200;
-    static const uint16_t PROG_SIZE = 8192;
-    static const uint16_t EEDATA_SIZE = 256;
-    static const uint16_t CONFIG_SIZE = 9;
+  namespace internal {
 
-  public:
-    explicit P16F88X(core::DeviceListener *listener);
+    template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+    class P16F88X : public internal::Execution {
+      static const uint16_t FILE_BUS_SIZE = 0x200;
+      static const uint16_t PROG_SIZE = ProgSize;
+      static const uint16_t EEDATA_SIZE = EEDataSize;
+      static const uint16_t CONFIG_SIZE = 9;
 
-    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+    public:
+      explicit P16F88X(core::DeviceListener *listener);
 
-    const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
+      sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
 
-    bool is_sleeping() const { return internal::Execution::is_sleeping(); }
+      const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
 
-  private:
-    internal::DataBus build_data_bus();
-    std::vector<sim::core::PinDescriptor> build_pin_descrs();
+      bool is_sleeping() const { return internal::Execution::is_sleeping(); }
 
-  private:
-    sim::core::Clock fosc4_;
-    sim::core::ClockScheduler clock_scheduler_;
+    private:
+      internal::DataBus build_data_bus();
+      std::vector<sim::core::PinDescriptor> build_pin_descrs();
 
-    std::array<internal::Port, 4> ports_;
-    internal::InterruptiblePort portb_;
-    std::vector<sim::core::PinDescriptor> pin_descrs_;
-    internal::Executor executor_;
-    sim::core::Scheduler scheduler_;
+    private:
+      sim::core::Clock fosc4_;
+      sim::core::ClockScheduler clock_scheduler_;
 
-    static const std::u16string_view address_map();
-  };
+      std::array<internal::Port, NumPorts - 1> ports_;
+      internal::InterruptiblePort portb_;
+      std::vector<sim::core::PinDescriptor> pin_descrs_;
+      internal::Executor executor_;
+      sim::core::Scheduler scheduler_;
+
+      static const std::u16string_view address_map();
+    };
+
+  }  // namespace internal
+
+  using P16F884 = internal::P16F88X<4096, 256, 5>;
+  using P16F887 = internal::P16F88X<8192, 256, 5>;
 
 }  // namespace sim::pic14
 
