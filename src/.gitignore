@@ -6,4 +6,4 @@ lib*.a
 *.wasm
 
 tests.js
-
+*_test.js
