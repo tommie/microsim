@@ -45,20 +45,30 @@ sim::core::Status load_ihex(std::istream &in, std::function<sim::core::Status(ui
       return std::make_error_code(std::errc::invalid_argument);
 
     int addr = parse_hex(line[3], line[4]);
-    if (addr < 0)
+    if (addr < 0) {
       return std::make_error_code(std::errc::invalid_argument);
+    }
+
     addr = (addr << 8) | parse_hex(line[5], line[6]);
     int rtype = parse_hex(line[7], line[8]);
-    int csum = parse_hex(line[1 + 2 + 4 + 2 + 2 * count], line[1 + 2 + 4 + 2 + 2 * count + 1]);
-    if (addr < 0 || rtype < 0 || csum < 0)
+    unsigned int csum = parse_hex(line[1 + 2 + 4 + 2 + 2 * count], line[1 + 2 + 4 + 2 + 2 * count + 1]);
+    if (addr < 0 || rtype < 0 || csum < 0) {
       return std::make_error_code(std::errc::invalid_argument);
+    }
 
     std::u8string data(count, 0);
     for (int i = 0, j = 1 + 2 + 4 + 2; i < count; ++i, j += 2) {
       data[i] = parse_hex(line[j], line[j + 1]);
     }
 
-    // TODO: checksum
+    unsigned int csum_real = 0;
+    for (int i = 1; i < line.size() - 2; i += 2) {
+      csum_real += parse_hex(line[i], line[i + 1]);
+    }
+
+    if (static_cast<uint8_t>(csum + csum_real) != 0) {
+      return std::make_error_code(std::errc::invalid_argument);
+    }
 
     switch (rtype) {
     case 0:
