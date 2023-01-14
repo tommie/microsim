@@ -93,6 +93,12 @@ namespace sim::pic14::internal {
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+  void P16F88X<ProgSize, EEDataSize, NumPorts>::reset(uint8_t status) {
+    Execution::reset(status);
+    option_reg().reset();
+  }
+
+  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
     auto adv = scheduler_.advance_to(limit);
     clock_scheduler_.advance_to(adv.at_tick);

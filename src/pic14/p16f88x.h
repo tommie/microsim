@@ -5,6 +5,7 @@
 #include "../core/scheduler.h"
 #include "execution.h"
 #include "port.h"
+#include "register.h"
 
 #include <array>
 #include <cstdint>
@@ -35,6 +36,11 @@ namespace sim::pic14 {
     private:
       internal::DataBus build_data_bus();
       std::vector<sim::core::PinDescriptor> build_pin_descrs();
+
+      const OptionReg option_reg() const { return OptionReg(const_cast<DataBus*>(&data_bus())); }
+      OptionReg option_reg() { return OptionReg(&data_bus()); }
+
+      void reset(uint8_t status);
 
     private:
       sim::core::Clock fosc4_;

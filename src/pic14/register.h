@@ -61,6 +61,24 @@ namespace sim::pic14::internal {
     DataBus *bus_;
   };
 
+  class OptionReg : public BitRegister<0x01> {
+  public:
+    enum Bits {
+      PS0, PS1, PS2, PSA, T0SE, T0CS, INTEDG, RBPU,
+    };
+
+    explicit OptionReg(DataBus *bus) : BitRegister(bus) {}
+
+    bool rbpu() const { return const_bit<RBPU>(); }
+    bool intedg() const { return const_bit<INTEDG>(); }
+    bool t0cs() const { return const_bit<T0CS>(); }
+    bool t0se() const { return const_bit<T0SE>(); }
+    bool psa() const { return const_bit<PSA>(); }
+    bool ps() const { return const_bit_field<PS0, 3>(); }
+
+    void reset() { write(0xFF); }
+  };
+
 }  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_register_h

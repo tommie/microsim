@@ -42,7 +42,6 @@ namespace sim::pic14::internal {
   void Execution::reset(uint8_t status) {
     Interruption::reset();
 
-    option_reg().reset();
     status_reg().reset(status);
     intcon_reg().reset();
 

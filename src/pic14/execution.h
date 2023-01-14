@@ -15,24 +15,6 @@
 
 namespace sim::pic14::internal {
 
-  class OptionReg : public BitRegister<0x01> {
-  public:
-    enum Bits {
-      PS0, PS1, PS2, PSA, T0SE, T0CS, INTEDG, RBPU,
-    };
-
-    explicit OptionReg(DataBus *bus) : BitRegister(bus) {}
-
-    bool rbpu() const { return const_bit<RBPU>(); }
-    bool intedg() const { return const_bit<INTEDG>(); }
-    bool t0cs() const { return const_bit<T0CS>(); }
-    bool t0se() const { return const_bit<T0SE>(); }
-    bool psa() const { return const_bit<PSA>(); }
-    bool ps() const { return const_bit_field<PS0, 3>(); }
-
-    void reset() { write(0xFF); }
-  };
-
   class StatusReg : public BitRegister<0x03> {
   public:
     enum Bits {
@@ -89,8 +71,8 @@ namespace sim::pic14::internal {
     /// awaken by interrupts, or a reset.
     bool is_sleeping() const { return in_sleep; }
 
-    const OptionReg option_reg() const { return OptionReg(const_cast<DataBus*>(&data_bus_)); }
-    OptionReg option_reg() { return OptionReg(&data_bus_); }
+    const DataBus& data_bus() const { return data_bus_; }
+    DataBus& data_bus() { return data_bus_; }
 
     const StatusReg status_reg() const { return StatusReg(const_cast<DataBus*>(&data_bus_)); }
     StatusReg status_reg() { return StatusReg(&data_bus_); }
