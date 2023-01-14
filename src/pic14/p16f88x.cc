@@ -30,8 +30,13 @@ namespace sim::pic14 {
 
   P16F88X::P16F88X(core::DeviceListener *listener)
     : Execution(listener,
+                &fosc4_,
                 NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE},
                 build_data_bus()),
+      fosc4_{1000},
+      clock_scheduler_(std::vector<sim::core::Clock*>{
+        &fosc4_,
+      }),
       ports_{
         internal::Port(0, listener),
         // PORTB is handled separately.
@@ -40,7 +45,11 @@ namespace sim::pic14 {
         internal::Port(4, listener),
       },
       portb_(1, listener, interrupt_mux().make_maskable_edge_signal_intcon(3, 0), interrupt_mux().make_maskable_edge_signal_intcon(4, 1), option_reg()),
-      pin_descrs_(build_pin_descrs()) {}
+      pin_descrs_(build_pin_descrs()),
+      executor_(this),
+      scheduler_(std::vector<sim::core::Schedulable*>{
+        &executor_,
+      }) {}
 
   internal::DataBus P16F88X::build_data_bus() {
     std::vector<internal::RegisterBackend*> backs;
@@ -79,8 +88,10 @@ namespace sim::pic14 {
     return descrs;
   }
 
-  core::Ticks P16F88X::advance() {
-    return execute();
+  sim::core::Advancement P16F88X::advance_to(const sim::core::SimulationLimit &limit) {
+    auto adv = scheduler_.advance_to(limit);
+    clock_scheduler_.advance_to(adv.at_tick);
+    return adv;
   }
 
-} // namespace pic14
+} // namespace sim::pic14

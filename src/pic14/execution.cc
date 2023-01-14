@@ -31,9 +31,10 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Execution::Execution(sim::core::DeviceListener *listener, const NonVolatile::Config &nv_config, DataBus &&data_bus)
+  Execution::Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus)
     : Device(listener),
       NonVolatile(nv_config),
+      clock_(clock),
       data_bus_(std::move(data_bus)) {
     reset(0);
   }
@@ -66,7 +67,19 @@ namespace sim::pic14::internal {
     }
   }
 
-  core::Ticks Execution::execute() {
+  sim::core::Advancement Execution::execute_to(const sim::core::SimulationLimit &limit) {
+    int i = 0;
+
+    for (sim::core::Ticks at_tick = clock_->at(0); limit.end_tick < 0 || at_tick - limit.end_tick <= 0; at_tick = clock_->at(i)) {
+      i += execute();
+
+      if (limit.cond && !limit.cond(at_tick)) break;
+    }
+
+    return {.at_tick = clock_->at(0), .next_tick = clock_->at(i)};
+  }
+
+  sim::core::Ticks Execution::execute() {
     if (is_in_icsp()) {
       return 0;
     }
@@ -404,6 +417,10 @@ namespace sim::pic14::internal {
     case Execution::RETLW: return "retlw";
     default: return "";
     }
+  }
+
+  sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
+    return execution_->execute_to(limit);
   }
 
 }  // namespace sim::pic14::internal

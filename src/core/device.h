@@ -5,10 +5,10 @@
 #include <vector>
 
 #include "../util/status.h"
+#include "scheduler.h"
+#include "simulation.h"
 
 namespace sim::core {
-
-  typedef long long Ticks;
 
   class Pin {
   public:
@@ -36,7 +36,7 @@ namespace sim::core {
     virtual void invalid_internal_state(const sim::util::Status &status) {}
 
     /// Invoked when a pin has changed state on the device.
-    virtual void pin_changed(Pin* pin, PinChange change) {}
+    virtual void pin_changed(Pin *pin, PinChange change) {}
   };
 
   struct PinDescriptor {
@@ -45,12 +45,10 @@ namespace sim::core {
     std::vector<std::string> path;
   };
 
-  class Device {
+  class Device : public Schedulable {
   public:
     Device(DeviceListener *listener);
     virtual ~Device() = default;
-
-    virtual Ticks advance() = 0;
 
     virtual const std::vector<PinDescriptor>& pins() const = 0;
 

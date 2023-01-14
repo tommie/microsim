@@ -23,11 +23,13 @@ clean:
 libcore.a: device.o ihex.o scheduler.o simulation.o
 	$(AR) cr $@ $^
 
-device.o: device.cc device.h ../util/status.h
+device.o: device.cc device.h scheduler.h simulation.h ../util/status.h
 
 ihex.o: ihex.cc ihex.h ../util/status.h
 
 scheduler.o: scheduler.cc scheduler.h
+
+simulation.o: simulation.cc simulation.h scheduler.h ../util/status.h
 
 scheduler_test.js: scheduler_test.o $(LDADD) libcore.a
 

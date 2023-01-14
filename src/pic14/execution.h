@@ -1,7 +1,9 @@
 #ifndef sim_pic14_execution_h
 #define sim_pic14_execution_h
 
+#include "../core/clock.h"
 #include "../core/device.h"
+#include "../core/scheduler.h"
 #include "data_bus.h"
 #include "interrupt.h"
 #include "nonvolatile.h"
@@ -55,6 +57,8 @@ namespace sim::pic14::internal {
   };
 
   class Execution : public sim::core::Device, public NonVolatile, public Interruption {
+    friend class Executor;
+
     static const int STACK_SIZE = 8;
 
     enum StackContext {
@@ -68,12 +72,14 @@ namespace sim::pic14::internal {
   public:
     /// Constructs a new Execution with the given configuration for
     /// non-volatile memory, and data bus.
-    Execution(sim::core::DeviceListener *listener, const NonVolatile::Config &nv_config, DataBus &&data_bus);
+    Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus);
 
   protected:
+    sim::core::Advancement execute_to(const sim::core::SimulationLimit &limit);
+
     /// Executes the next instruction and returns the number of ticks
     /// it took.
-    core::Ticks execute();
+    sim::core::Ticks execute();
 
     /// Resets the execution unit, including register values. `status`
     /// is a mask of TO and PD bits to set.
@@ -110,6 +116,7 @@ namespace sim::pic14::internal {
     static std::string_view stack_context_text(StackContext context);
 
   private:
+    sim::core::Clock *clock_;
     DataBus data_bus_;
 
     std::array<uint16_t, STACK_SIZE> stack;
@@ -117,6 +124,16 @@ namespace sim::pic14::internal {
     uint8_t w_reg_;
 
     bool in_sleep;
+  };
+
+  class Executor : public sim::core::Schedulable {
+  public:
+    explicit Executor(Execution *ex) : execution_(ex) {}
+
+    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+
+  private:
+    Execution *execution_;
   };
 
 }  // namespace sim::pic14::internal

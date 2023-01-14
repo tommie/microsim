@@ -43,11 +43,13 @@ public:
   }
 
 protected:
-  sim::core::Ticks advance_until_sleep() {
-    sim::core::Ticks ticks = 0;
+  void advance_until_sleep() {
+    sim::core::SimulationLimit limit = {
+      .cond = [this](sim::core::Ticks at_tick) { return !proc.is_sleeping(); },
+    };
     for (;;) {
-      ticks += proc.advance();
-      if (proc.is_sleeping()) return ticks;
+      proc.advance_to(limit);
+      if (proc.is_sleeping()) return;
     }
   }
 

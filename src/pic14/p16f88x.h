@@ -2,6 +2,7 @@
 #define sim_pic14_p16f88x_h
 
 #include "../core/device.h"
+#include "../core/scheduler.h"
 #include "execution.h"
 #include "port.h"
 
@@ -22,7 +23,7 @@ namespace sim::pic14 {
   public:
     explicit P16F88X(core::DeviceListener *listener);
 
-    core::Ticks advance() override;
+    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
 
     const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
 
@@ -33,9 +34,14 @@ namespace sim::pic14 {
     std::vector<sim::core::PinDescriptor> build_pin_descrs();
 
   private:
+    sim::core::Clock fosc4_;
+    sim::core::ClockScheduler clock_scheduler_;
+
     std::array<internal::Port, 4> ports_;
     internal::InterruptiblePort portb_;
     std::vector<sim::core::PinDescriptor> pin_descrs_;
+    internal::Executor executor_;
+    sim::core::Scheduler scheduler_;
 
     static const std::u16string_view address_map();
   };
