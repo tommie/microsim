@@ -5,93 +5,10 @@
 #include <unordered_map>
 #include <sstream>
 
+#include "../core/ihex.h"
 #include "../core/status.h"
 #include "../testing/testing.h"
 #include "p16f88x.h"
-
-int parse_hex(char c) {
-  if (c < '0') return -1;
-  if (c <= '9') return c - '0';
-  if (c < 'A') return -1;
-  if (c <= 'F') return c - 'A' + 10;
-  if (c < 'a') return -1;
-  if (c <= 'f') return c - 'a' + 10;
-  return -1;
-}
-
-int parse_hex(char c1, char c2) {
-  int i1 = parse_hex(c1);
-  if (i1 < 0) return -1;
-  return (i1 << 4) | parse_hex(c2);
-}
-
-sim::core::Status load_ihex(std::istream &in, std::function<sim::core::Status(uint16_t, std::u8string_view)> load) {
-  for (std::array<char, 256> buf; in.getline(&buf[0], buf.size());) {
-    std::string line(&buf[0]);
-
-    if (line.size() == 0) {
-      continue;
-    }
-
-    if (line.size() < 1 + 2 + 4 + 2 + 2) {
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    if (line[0] != ':') {
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    int count = parse_hex(line[1], line[2]);
-    if (count < 0 || line.size() < 1 + 2 + 4 + 2 + 2 * count + 2)
-      return std::make_error_code(std::errc::invalid_argument);
-
-    int addr = parse_hex(line[3], line[4]);
-    if (addr < 0) {
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    addr = (addr << 8) | parse_hex(line[5], line[6]);
-    int rtype = parse_hex(line[7], line[8]);
-    unsigned int csum = parse_hex(line[1 + 2 + 4 + 2 + 2 * count], line[1 + 2 + 4 + 2 + 2 * count + 1]);
-    if (addr < 0 || rtype < 0 || csum < 0) {
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    std::u8string data(count, 0);
-    for (int i = 0, j = 1 + 2 + 4 + 2; i < count; ++i, j += 2) {
-      data[i] = parse_hex(line[j], line[j + 1]);
-    }
-
-    unsigned int csum_real = 0;
-    for (int i = 1; i < line.size() - 2; i += 2) {
-      csum_real += parse_hex(line[i], line[i + 1]);
-    }
-
-    if (static_cast<uint8_t>(csum + csum_real) != 0) {
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-
-    switch (rtype) {
-    case 0:
-      if (auto status = load(static_cast<uint16_t>(addr / 2), data); !status.ok()) {
-        return status;
-      }
-      break;
-
-    case 1:
-      return sim::core::Status();
-
-    case 4:
-      // Ignored.
-      break;
-
-    default:
-      return std::make_error_code(std::errc::invalid_argument);
-    }
-  }
-
-  return sim::core::Status(std::make_error_code(std::errc::invalid_argument), "missing EOF record");
-}
 
 template<typename Proc>
 sim::core::Status load_testdata_ihex(Proc *proc, std::string_view path) {
@@ -102,7 +19,7 @@ sim::core::Status load_testdata_ihex(Proc *proc, std::string_view path) {
     return sim::core::Status(std::error_code(errno, std::system_category()), path);
   }
 
-  return load_ihex(ihex, std::bind_front(&sim::pic14::ICSP::load_program, &icsp));
+  return sim::core::load_ihex(ihex, std::bind_front(&sim::pic14::ICSP::load_program, &icsp));
 }
 
 class DeviceListener : public sim::core::DeviceListener {

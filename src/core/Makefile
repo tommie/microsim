@@ -9,7 +9,9 @@ all: libcore.a
 clean:
 	rm -f *.o libcore.a
 
-libcore.a: device.o
+libcore.a: device.o ihex.o scheduler.o simulation.o
 	$(AR) cr $@ $^
 
 device.o: device.cc device.h
+
+ihex.o: ihex.cc ihex.h status.h
