@@ -4,9 +4,11 @@
     banksel TRISA
     movwf   TRISA
 
+    bcf     INTCON, INTF
     bsf     INTCON, INTE
     sleep
 
+    bcf     INTCON, INTF
     banksel PORTB
     movf    PORTB, W
     banksel PORTA

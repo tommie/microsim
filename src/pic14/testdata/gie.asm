@@ -16,6 +16,7 @@ start:
     banksel TRISA
     movwf   TRISA
 
+    bcf     INTCON, INTF
     bsf     INTCON, INTE
     bsf     INTCON, GIE
     sleep
