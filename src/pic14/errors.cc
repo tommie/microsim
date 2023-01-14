@@ -2,7 +2,7 @@
 
 namespace sim::pic14 {
 
-  const char* ErrorCategoryImpl::name() const _NOEXCEPT {
+  const char* ErrorCategoryImpl::name() const noexcept {
     return "pic14";
   }
 

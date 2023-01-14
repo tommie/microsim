@@ -40,7 +40,7 @@ namespace sim::core {
         return std::make_error_code(std::errc::invalid_argument);
       }
 
-      int count = parse_hex(line[1], line[2]);
+      size_t count = parse_hex(line[1], line[2]);
       if (count < 0 || line.size() < 1 + 2 + 4 + 2 + 2 * count + 2)
         return std::make_error_code(std::errc::invalid_argument);
 
@@ -57,12 +57,12 @@ namespace sim::core {
       }
 
       std::u8string data(count, 0);
-      for (int i = 0, j = 1 + 2 + 4 + 2; i < count; ++i, j += 2) {
+      for (size_t i = 0, j = 1 + 2 + 4 + 2; i < count; ++i, j += 2) {
         data[i] = parse_hex(line[j], line[j + 1]);
       }
 
       unsigned int csum_real = 0;
-      for (int i = 1; i < line.size() - 2; i += 2) {
+      for (size_t i = 1; i < line.size() - 2; i += 2) {
         csum_real += parse_hex(line[i], line[i + 1]);
       }
 

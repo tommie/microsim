@@ -16,7 +16,7 @@ namespace sim::pic14 {
 
   class ErrorCategoryImpl : public std::error_category {
   public:
-    const char* name() const _NOEXCEPT override;
+    const char* name() const noexcept override;
     std::string message(int err_value) const override;
   };
 
