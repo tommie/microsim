@@ -22,7 +22,7 @@ clean:
 libpic14.a: errors.o execution.o data_bus.o interrupt.o nonvolatile.o port.o p16f88x.o
 	$(AR) cr $@ $^
 
-tests.js tests.wasm: tests.o libpic14.a
+tests.js tests.wasm: tests.o libpic14.a $(LDADD)
 	$(LD) $(LDFLAGS) $(CXXFLAGS) -o $@ $^ $(LDADD)
 
 errors.o: errors.cc errors.h
@@ -39,5 +39,6 @@ port.o: port.cc port.h execution.h data_bus.h interrupt.h ../core/device.h
 
 p16f88x.o: p16f88x.cc p16f88x.h execution.h data_bus.h interrupt.h nonvolatile.h port.h ../core/device.h ../core/status.h
 
-tests.o: tests.cc p16f88x.h execution.h data_bus.h nonvolatile.h port.h ../core/device.h ../core/status.h
+tests.o: tests.cc p16f88x.h execution.h data_bus.h nonvolatile.h port.h ../core/device.h ../core/status.h ../testing/testing.h
 tests.js: LDFLAGS += -sNODERAWFS
+tests.js: LDADD += ../testing/libtesting.a

@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "../core/status.h"
+#include "../testing/testing.h"
 #include "p16f88x.h"
 
 int parse_hex(char c) {
@@ -113,92 +114,11 @@ public:
   std::unordered_map<sim::core::Pin*, sim::core::PinDescriptor> pin_descrs;
 };
 
-class TestCase;
-
-class TestReporter {
-public:
-  virtual void test_case_done(std::string_view name, const sim::core::Status &status) {}
-};
-
-class StreamTestReporter : public TestReporter {
-public:
-  explicit StreamTestReporter(std::ostream *out) : out_(out) {}
-
-  void test_case_done(std::string_view name, const sim::core::Status &status) override {
-    if (status.ok()) {
-      *out_ << "ok TEST " << name << std::endl;
-    } else {
-      *out_ << "!! TEST " << name << ": " << status << std::endl;
-    }
-  }
-
-private:
-  std::ostream *out_;
-};
-
-class TestSuite {
-public:
-  explicit TestSuite(TestReporter *reporter) : reporter_(reporter) {}
-
-  int run();
-
-  void register_test_case(TestCase *cas) { cases_.push_back(cas); }
-
-private:
-  TestReporter *reporter_;
-  std::list<TestCase*> cases_;
-};
-
-StreamTestReporter default_test_reporter(&std::cout);
-TestSuite default_test_suite(&default_test_reporter);
-
-class TestCase {
-public:
-  TestCase() {
-    default_test_suite.register_test_case(this);
-  }
-
-  virtual std::string_view name() const = 0;
-
-  sim::core::Status operator()() {
-    if (auto status = setUp(); !status.ok()) return status;
-    run();
-    return result_;
-  }
-
-protected:
-  virtual sim::core::Status setUp() { return sim::core::Status(); }
-  virtual void run() = 0;
-
-  void fail(const sim::core::Status &status) {
-    if (result_.ok()) result_ = status;
-  }
-
-  void fail(std::string_view msg) {
-    if (result_.ok()) result_ = sim::core::Status(std::make_error_code(std::errc::broken_pipe), msg);
-  }
-
-private:
-  sim::core::Status result_;
-};
-
-int TestSuite::run() {
-  int ret = 0;
-  for (auto *cas : cases_) {
-    auto status = (*cas)();
-    reporter_->test_case_done(cas->name(), status);
-    if (!status.ok()) {
-      ret = 1;
-    }
-  }
-  return ret;
-}
-
 template<typename Proc>
-class ProcessorTestCase : public TestCase {
+class ProcessorTestCase : public sim::testing::TestCase {
 public:
-  ProcessorTestCase(std::string_view name, std::string_view firmware)
-    : name_(name), firmware_(firmware), proc(&listener) {
+  ProcessorTestCase(std::string_view firmware)
+    : firmware_(firmware), proc(&listener) {
     for (const auto &descr : proc.pins()) {
       listener.pin_descrs[descr.pin] = descr;
       pins[descr.name] = descr.pin;
@@ -214,8 +134,6 @@ protected:
     }
   }
 
-  std::string_view name() const override { return name_; }
-
   sim::core::Status setUp() override {
     if (auto status = load_testdata_ihex(&proc, firmware_); !status.ok()) {
       return status;
@@ -224,7 +142,6 @@ protected:
   }
 
 private:
-  std::string_view name_;
   std::string_view firmware_;
   DeviceListener listener;
 
@@ -233,12 +150,9 @@ protected:
   std::unordered_map<std::string, sim::core::Pin*> pins;
 };
 
-#define PROCESSOR_TEST(Name, Proc, Firmware)                            \
-  struct Name : public ProcessorTestCase<sim::pic14::Proc> {            \
-    Name() : ProcessorTestCase(#Name, Firmware) {}                      \
-    void run() override;                                                \
-  } Name;                                                               \
-  void Name::run()
+#define PROCESSOR_TEST(Name, Proc, Firmware) \
+  SIM_TEST_BASE(Name, ProcessorTestCase<sim::pic14::Proc>, Firmware)
+
 
 PROCESSOR_TEST(PortTest, P16F88X, "testdata/port.hex") {
   pins["RB0"]->set_external(1);
@@ -273,5 +187,5 @@ PROCESSOR_TEST(GlobalInterruptTest, P16F88X, "testdata/gie.hex") {
 }
 
 int main() {
-  return default_test_suite.run();
+  return sim::testing::TestSuite::global().run();
 }
