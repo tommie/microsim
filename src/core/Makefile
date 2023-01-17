@@ -8,7 +8,8 @@ LDFLAGS = -sLLD_REPORT_UNDEFINED -sSTRICT_JS -sINCOMING_MODULE_JS_API=noExitRunt
 all: libcore.a
 
 .PHONY: check
-check: scheduler_test.js
+check: clock_test.js scheduler_test.js
+	nodejs ./clock_test.js
 	nodejs ./scheduler_test.js
 
 .PHONY: clean
@@ -30,6 +31,10 @@ ihex.o: ihex.cc ihex.h ../util/status.h
 scheduler.o: scheduler.cc scheduler.h
 
 simulation.o: simulation.cc simulation.h scheduler.h ../util/status.h
+
+clock_test.js: clock_test.o $(LDADD) libcore.a
+
+clock_test.o: clock_test.cc clock.h
 
 scheduler_test.js: scheduler_test.o $(LDADD) libcore.a
 

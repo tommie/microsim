@@ -27,11 +27,11 @@ namespace sim::core {
     /// progresses so that `at(0)` always represents the next clock
     /// tick, rather than some time in the past.
     void advance_to(Ticks end_tick) {
-      Ticks d = end_tick - (next_tick_ + interval_);
+      Ticks d = end_tick - next_tick_;
 
       if (d < 0) return;
 
-      next_tick_ += d % interval_ + interval_ * d / interval_;
+      next_tick_ += d / interval_ * interval_;
     }
 
   private:
