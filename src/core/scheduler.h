@@ -62,10 +62,14 @@ namespace sim::core {
     /// Makes the scheduler advance this schedulable ahead of the
     /// normal queue. Use this if the inputs have changed, requiring
     /// urgent recomputation.
-    void schedule_immediately() { task_queue_->enqueue(this); }
+    void schedule_immediately() {
+      if (task_queue_) {
+        task_queue_->enqueue(this);
+      }
+    }
 
   private:
-    TaskQueue *task_queue_;
+    TaskQueue *task_queue_ = nullptr;
     Ticks next_tick_ = 0;
   };
 
