@@ -7,7 +7,7 @@ namespace sim::pic14::internal {
       mux_->intcon_ |= flag_mask_;
       active_ = true;
 
-      if (mux_->is_active()) mux_->interrupt_.emit();
+      if (mux_->is_active()) mux_->interrupt_();
     }
   }
 

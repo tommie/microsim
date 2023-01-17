@@ -38,7 +38,7 @@ namespace sim::pic14::internal {
     void update_logic(uint8_t v);
   };
 
-  class Executor : public sim::core::Schedulable, public InterruptHandler, public NonVolatileHandler {
+  class Executor : public sim::core::Schedulable {
     static const int STACK_SIZE = 8;
 
     enum StackContext {
@@ -75,15 +75,15 @@ namespace sim::pic14::internal {
     const IntConReg intcon_reg() const { return IntConReg(const_cast<DataBus*>(&data_bus_)); }
     IntConReg intcon_reg() { return IntConReg(&data_bus_); }
 
+    /// Implements InterruptMux::InterruptSignal.
+    void interrupted();
+
+    /// Implements NonVolatile::ResetSignal..
+    void icsp_reset() { reset(0); }
+
   protected:
     /// Implements Schedulable.
     sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
-
-    /// Implements ICSPHandler.
-    void icsp_reset() override { reset(0); }
-
-    /// Implements InterruptHandler.
-    void interrupted() override;
 
   private:
     uint8_t get_register(uint16_t addr) { return data_bus_.read_register(addr); }

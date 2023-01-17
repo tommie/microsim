@@ -36,12 +36,12 @@ namespace sim::pic14::internal {
       clock_scheduler_(std::vector<sim::core::Clock*>{
         &fosc4_,
       }),
-      interrupt_mux_(InterruptMux::InterruptSignal(&signal_queue_, std::to_array({
-        &executor_,
-      }))),
-      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, NonVolatile::ResetSignal(&signal_queue_, std::to_array({
-        &executor_,
-      }))),
+      interrupt_mux_([this]() {
+        executor_.interrupted();
+      }),
+      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, [this]() {
+        executor_.icsp_reset();
+      }),
       executor_(listener,
                 &fosc4_,
                 &nv_,
@@ -110,9 +110,6 @@ namespace sim::pic14::internal {
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
-    while (signal_queue_.execute_front())
-      continue;
-
     auto adv = scheduler_.advance_to(limit);
     clock_scheduler_.advance_to(adv.at_tick);
     return adv;

@@ -45,7 +45,6 @@ namespace sim::pic14 {
     private:
       sim::core::Clock fosc4_;
       sim::core::ClockScheduler clock_scheduler_;
-      sim::core::SignalQueue signal_queue_;
 
       internal::InterruptMux interrupt_mux_;
       internal::NonVolatile nv_;

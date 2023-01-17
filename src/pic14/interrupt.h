@@ -4,8 +4,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 
-#include "../core/signal.h"
 #include "data_bus.h"
 #include "register.h"
 
@@ -21,18 +21,13 @@ namespace sim::pic14::internal {
     void reset() { write(0); }
   };
 
-  class InterruptHandler {
-  public:
-    virtual void interrupted() = 0;
-  };
-
   /// An interrupt multiplexer that is active if any signal is
   /// raised.
   class InterruptMux : public RegisterBackend {
     static const int GIEBit = 7;
 
   public:
-    using InterruptSignal = sim::core::Signal<InterruptHandler, &InterruptHandler::interrupted>;
+    using InterruptSignal = std::function<void()>;
 
     class MaskableIntconEdgeSignal {
     public:
@@ -53,7 +48,7 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
-    explicit InterruptMux(InterruptSignal &&interrupt) : interrupt_(std::move(interrupt)) {}
+    explicit InterruptMux(InterruptSignal interrupt) : interrupt_(std::move(interrupt)) {}
 
     /// Creates an interrupt signal masked by the INTCON `en_bit`,
     /// using `flag_bit` as the flag. Calling `raise()` multiple times

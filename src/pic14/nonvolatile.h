@@ -2,10 +2,10 @@
 #define sim_pic14_nonvolatile_h
 
 #include <cstdint>
+#include <functional>
 #include <string_view>
 #include <system_error>
 
-#include "../core/signal.h"
 #include "../util/status.h"
 
 namespace sim::pic14 {
@@ -14,11 +14,6 @@ namespace sim::pic14 {
 
   namespace internal {
 
-    class NonVolatileHandler {
-    public:
-      virtual void icsp_reset() {}
-    };
-
     /// The non-volatile memory of a PIC14 device.
     ///
     /// This memory can be programmed in-circuit.
@@ -26,7 +21,7 @@ namespace sim::pic14 {
       friend class sim::pic14::ICSP;
 
     public:
-      using ResetSignal = sim::core::Signal<NonVolatileHandler, &NonVolatileHandler::icsp_reset>;
+      using ResetSignal = std::function<void()>;
 
       struct Config {
         uint16_t prog_size;
@@ -34,11 +29,11 @@ namespace sim::pic14 {
         uint16_t eedata_size;
       };
 
-      NonVolatile(const Config &config, ResetSignal &&reset_sig)
+      NonVolatile(const Config &config, ResetSignal reset)
         : progmem_(config.prog_size, 0x3FFF),
           config_(config.config_size, 0x3FFF),
           eedata_(config.eedata_size, 0xFF),
-          reset_(std::move(reset_sig)) {}
+          reset_(std::move(reset)) {}
 
     public:
       /// Returns whether the device is currently in ICSP mode. While
@@ -78,7 +73,7 @@ namespace sim::pic14 {
 
     ~ICSP() {
       device->in_icsp = false;
-      device->reset_.emit();
+      device->reset_();
     }
 
     /// Programs memory at the specified address. For 14-bit data
