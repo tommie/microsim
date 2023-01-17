@@ -38,7 +38,7 @@ namespace sim::pic14::internal {
     void update_logic(uint8_t v);
   };
 
-  class Execution : public sim::core::Device, public NonVolatile, public Interruption {
+  class Execution : public sim::core::Device, public NonVolatile {
     friend class Executor;
 
     static const int STACK_SIZE = 8;
@@ -54,7 +54,7 @@ namespace sim::pic14::internal {
   public:
     /// Constructs a new Execution with the given configuration for
     /// non-volatile memory, and data bus.
-    Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus);
+    Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus, InterruptMux *interrupt_mux);
 
   protected:
     sim::core::Advancement execute_to(const sim::core::SimulationLimit &limit);
@@ -100,6 +100,7 @@ namespace sim::pic14::internal {
   private:
     sim::core::Clock *clock_;
     DataBus data_bus_;
+    InterruptMux *interrupt_mux_;
 
     std::array<uint16_t, STACK_SIZE> stack;
     uint8_t sp_reg_;
@@ -108,11 +109,12 @@ namespace sim::pic14::internal {
     bool in_sleep;
   };
 
-  class Executor : public sim::core::Schedulable {
+  class Executor : public sim::core::Schedulable, public InterruptHandler {
   public:
     explicit Executor(Execution *ex) : execution_(ex) {}
 
     sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+    void interrupted() override;
 
   private:
     Execution *execution_;

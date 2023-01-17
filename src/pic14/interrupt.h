@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "../core/signal.h"
 #include "data_bus.h"
 #include "register.h"
 
@@ -20,22 +21,26 @@ namespace sim::pic14::internal {
     void reset() { write(0); }
   };
 
+  class InterruptHandler {
+  public:
+    virtual void interrupted() = 0;
+  };
+
   /// An interrupt multiplexer that is active if any signal is
   /// raised.
   class InterruptMux : public RegisterBackend {
     static const int GIEBit = 7;
 
   public:
+    using InterruptSignal = sim::core::Signal<InterruptHandler, &InterruptHandler::interrupted>;
+
     class MaskableIntconEdgeSignal {
     public:
       MaskableIntconEdgeSignal(InterruptMux *mux, uint8_t flag_mask)
         : mux_(mux), flag_mask_(flag_mask) {}
 
       void reset() { active_ = false; }
-      void raise() {
-        if (!active_) mux_->intcon_ |= flag_mask_;
-        active_ = true;
-      }
+      void raise();
 
       MaskableIntconEdgeSignal(MaskableIntconEdgeSignal&&) = default;
       MaskableIntconEdgeSignal& operator =(MaskableIntconEdgeSignal&&) = default;
@@ -48,7 +53,7 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
-    InterruptMux() = default;
+    InterruptMux(InterruptSignal &&interrupt) : interrupt_(std::move(interrupt)) {}
 
     /// Creates an interrupt signal masked by the INTCON `en_bit`,
     /// using `flag_bit` as the flag. Calling `raise()` multiple times
@@ -71,23 +76,13 @@ namespace sim::pic14::internal {
     InterruptMux& operator=(const InterruptMux&) = delete;
 
   private:
+    InterruptSignal interrupt_;
+
     uint8_t intcon_ = 0;
     std::array<uint8_t, 2> pie_ = {0, 0};
     std::array<uint8_t, 2> pir_ = {0, 0};
 
     std::array<uint8_t, 8> intcon_en_bits_ = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-  };
-
-  class Interruption {
-  protected:
-    InterruptMux& interrupt_mux() { return interrupt_mux_; }
-
-    void reset() {
-      interrupt_mux_.reset();
-    }
-
-  private:
-    InterruptMux interrupt_mux_;
   };
 
 }  // namespace sim::pic14::internal

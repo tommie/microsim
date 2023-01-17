@@ -31,17 +31,14 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Execution::Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus)
+  Execution::Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus, InterruptMux *interrupt_mux)
     : Device(listener),
       NonVolatile(nv_config),
       clock_(clock),
-      data_bus_(std::move(data_bus)) {
-    reset(0);
-  }
+      data_bus_(std::move(data_bus)),
+      interrupt_mux_(interrupt_mux) {}
 
   void Execution::reset(uint8_t status) {
-    Interruption::reset();
-
     status_reg().reset(status);
     intcon_reg().reset();
 
@@ -83,7 +80,7 @@ namespace sim::pic14::internal {
       return 0;
     }
 
-    if (interrupt_mux().is_active()) {
+    if (interrupt_mux_->is_active()) {
       auto intcon = Execution::intcon_reg();
 
       if (intcon.gie()) {
@@ -138,7 +135,7 @@ namespace sim::pic14::internal {
 
           case 0x0063:
             // sleep: to, pd
-            if (!interrupt_mux().is_active()) {
+            if (!interrupt_mux_->is_active()) {
               in_sleep = true;
               status.update_reset((1 << StatusReg::PD));
             }
@@ -420,6 +417,10 @@ namespace sim::pic14::internal {
 
   sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
     return execution_->execute_to(limit);
+  }
+
+  void Executor::interrupted() {
+    execution_->schedule_immediately();
   }
 
 }  // namespace sim::pic14::internal

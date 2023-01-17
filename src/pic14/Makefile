@@ -27,18 +27,18 @@ tests.js tests.wasm: tests.o libpic14.a $(LDADD)
 
 errors.o: errors.cc errors.h
 
-execution.o: execution.cc execution.h errors.h data_bus.h interrupt.h nonvolatile.h ../core/clock.h ../core/device.h ../core/scheduler.h ../util/status.h
+execution.o: execution.cc execution.h errors.h data_bus.h interrupt.h nonvolatile.h ../core/clock.h ../core/device.h ../core/scheduler.h ../core/signal.h ../util/status.h
 
 data_bus.o: data_bus.cc data_bus.h
 
-interrupt.o: interrupt.cc interrupt.h data_bus.h register.h
+interrupt.o: interrupt.cc interrupt.h data_bus.h register.h ../core/signal.h
 
 nonvolatile.o: nonvolatile.cc nonvolatile.h
 
-port.o: port.cc port.h execution.h data_bus.h interrupt.h ../core/device.h
+port.o: port.cc port.h execution.h data_bus.h interrupt.h ../core/device.h ../core/signal.h
 
-p16f88x.o: p16f88x.cc p16f88x.h execution.h data_bus.h interrupt.h nonvolatile.h port.h register.h ../core/clock.h ../core/device.h ../core/scheduler.h ../util/status.h
+p16f88x.o: p16f88x.cc p16f88x.h execution.h data_bus.h interrupt.h nonvolatile.h port.h register.h ../core/clock.h ../core/device.h ../core/scheduler.h ../core/signal.h ../util/status.h
 
-tests.o: tests.cc p16f88x.h execution.h data_bus.h nonvolatile.h port.h ../core/device.h ../util/status.h ../testing/testing.h
+tests.o: tests.cc p16f88x.h execution.h data_bus.h interrupt.h nonvolatile.h port.h ../core/device.h ../core/signal.h ../util/status.h ../testing/testing.h
 tests.js: LDFLAGS += -sNODERAWFS
 tests.js: LDADD += ../testing/libtesting.a

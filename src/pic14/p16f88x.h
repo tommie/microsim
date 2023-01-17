@@ -46,10 +46,12 @@ namespace sim::pic14 {
       sim::core::Clock fosc4_;
       sim::core::ClockScheduler clock_scheduler_;
 
+      sim::core::SignalQueue signal_queue_;
+      internal::InterruptMux interrupt_mux_;
+      internal::Executor executor_;
       std::array<internal::Port, NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
-      internal::Executor executor_;
       sim::core::Scheduler scheduler_;
 
       static const std::u16string_view address_map();

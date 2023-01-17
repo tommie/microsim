@@ -34,11 +34,16 @@ namespace sim::pic14::internal {
     : Execution(listener,
                 &fosc4_,
                 NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE},
-                build_data_bus()),
+                build_data_bus(),
+                &interrupt_mux_),
       fosc4_{1000},
       clock_scheduler_(std::vector<sim::core::Clock*>{
         &fosc4_,
       }),
+      interrupt_mux_(InterruptMux::InterruptSignal(&signal_queue_, std::to_array({
+        &executor_,
+      }))),
+      executor_(this),
       ports_{
         internal::Port(0, listener),
         // PORTB is handled separately.
@@ -46,12 +51,13 @@ namespace sim::pic14::internal {
         internal::Port(3, listener),
         internal::Port(4, listener),
       },
-      portb_(1, listener, interrupt_mux().make_maskable_edge_signal_intcon(3, 0), interrupt_mux().make_maskable_edge_signal_intcon(4, 1), option_reg()),
+      portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), option_reg()),
       pin_descrs_(build_pin_descrs()),
-      executor_(this),
       scheduler_(std::vector<sim::core::Schedulable*>{
         &executor_,
-      }) {}
+      }) {
+    reset(0);
+  }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {
@@ -63,7 +69,7 @@ namespace sim::pic14::internal {
     backmap[0x05 + 1] = backmap[0x85 + 1] = backmap[0x95] = backmap[0x96] = backs.size(); backs.push_back(&portb_);
     backmap[0x05 + 2] = backmap[0x85 + 2] = backs.size(); backs.push_back(&ports_[1]);
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
-    backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux());
+    backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
 
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
@@ -95,11 +101,15 @@ namespace sim::pic14::internal {
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   void P16F88X<ProgSize, EEDataSize, NumPorts>::reset(uint8_t status) {
     Execution::reset(status);
+    interrupt_mux_.reset();
     option_reg().reset();
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
+    while (signal_queue_.execute_front())
+      continue;
+
     auto adv = scheduler_.advance_to(limit);
     clock_scheduler_.advance_to(adv.at_tick);
     return adv;
