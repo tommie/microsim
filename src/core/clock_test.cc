@@ -25,7 +25,6 @@ namespace sim::core {
 
     c.advance_to(25);
 
-    printf("a %lld\n", c.at(0));
     if (c.at(0) != 20) fail("c.at(0) not 20 after advance_to(25)");
   }
 
