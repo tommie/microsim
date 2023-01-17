@@ -53,7 +53,7 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
-    InterruptMux(InterruptSignal &&interrupt) : interrupt_(std::move(interrupt)) {}
+    explicit InterruptMux(InterruptSignal &&interrupt) : interrupt_(std::move(interrupt)) {}
 
     /// Creates an interrupt signal masked by the INTCON `en_bit`,
     /// using `flag_bit` as the flag. Calling `raise()` multiple times

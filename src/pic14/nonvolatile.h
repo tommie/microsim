@@ -5,6 +5,7 @@
 #include <string_view>
 #include <system_error>
 
+#include "../core/signal.h"
 #include "../util/status.h"
 
 namespace sim::pic14 {
@@ -13,27 +14,31 @@ namespace sim::pic14 {
 
   namespace internal {
 
+    class NonVolatileHandler {
+    public:
+      virtual void icsp_reset() {}
+    };
+
     /// The non-volatile memory of a PIC14 device.
     ///
     /// This memory can be programmed in-circuit.
     class NonVolatile {
       friend class sim::pic14::ICSP;
 
-    protected:
+    public:
+      using ResetSignal = sim::core::Signal<NonVolatileHandler, &NonVolatileHandler::icsp_reset>;
+
       struct Config {
         uint16_t prog_size;
         uint16_t config_size;
         uint16_t eedata_size;
       };
 
-      NonVolatile(const Config &config)
-        : progmem(config.prog_size, 0x3FFF),
-          config(config.config_size, 0x3FFF),
-          eedata(config.eedata_size, 0xFF) {}
-
-      /// Callback invoked when leaving ICSP mode. The device should
-      /// be reset.
-      virtual void icsp_reset() = 0;
+      NonVolatile(const Config &config, ResetSignal &&reset_sig)
+        : progmem_(config.prog_size, 0x3FFF),
+          config_(config.config_size, 0x3FFF),
+          eedata_(config.eedata_size, 0xFF),
+          reset_(std::move(reset_sig)) {}
 
     public:
       /// Returns whether the device is currently in ICSP mode. While
@@ -45,12 +50,16 @@ namespace sim::pic14 {
       /// device leaves ICSP mode.
       ICSP enter_icsp();
 
-    protected:
-      std::u16string progmem;
-      std::u16string config;
-      std::u8string eedata;
+      std::u16string& progmem() { return progmem_; }
+      std::u16string& config() { return config_; }
+      std::u8string& eedata() { return eedata_; }
 
     private:
+      std::u16string progmem_;
+      std::u16string config_;
+      std::u8string eedata_;
+
+      ResetSignal reset_;
       bool in_icsp = false;
     };
 
@@ -69,7 +78,7 @@ namespace sim::pic14 {
 
     ~ICSP() {
       device->in_icsp = false;
-      device->icsp_reset();
+      device->reset_.emit();
     }
 
     /// Programs memory at the specified address. For 14-bit data

@@ -38,9 +38,7 @@ namespace sim::pic14::internal {
     void update_logic(uint8_t v);
   };
 
-  class Execution : public sim::core::Device, public NonVolatile {
-    friend class Executor;
-
+  class Executor : public sim::core::Schedulable, public InterruptHandler, public NonVolatileHandler {
     static const int STACK_SIZE = 8;
 
     enum StackContext {
@@ -52,12 +50,9 @@ namespace sim::pic14::internal {
     };
 
   public:
-    /// Constructs a new Execution with the given configuration for
+    /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
-    Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus, InterruptMux *interrupt_mux);
-
-  protected:
-    sim::core::Advancement execute_to(const sim::core::SimulationLimit &limit);
+    Executor(sim::core::DeviceListener *listener, sim::core::Clock *clock, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
@@ -80,14 +75,21 @@ namespace sim::pic14::internal {
     const IntConReg intcon_reg() const { return IntConReg(const_cast<DataBus*>(&data_bus_)); }
     IntConReg intcon_reg() { return IntConReg(&data_bus_); }
 
-    /// Called by NonVolatile when leaving ICSP mode.
+  protected:
+    /// Implements Schedulable.
+    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+
+    /// Implements ICSPHandler.
     void icsp_reset() override { reset(0); }
+
+    /// Implements InterruptHandler.
+    void interrupted() override;
 
   private:
     uint8_t get_register(uint16_t addr) { return data_bus_.read_register(addr); }
     void set_register(uint16_t addr, uint8_t v) { data_bus_.write_register(addr, v); }
     uint16_t get_pc() const { return ((uint16_t) data_bus_.const_read_register(0x0A) << 8) | data_bus_.const_read_register(0x02); }
-    void set_pc(uint16_t v) { v &= progmem.size() - 1; set_register(0x0A, v >> 8); set_register(0x02, v & 0xFF); }
+    void set_pc(uint16_t v) { v &= nv_->progmem().size() - 1; set_register(0x0A, v >> 8); set_register(0x02, v & 0xFF); }
     uint8_t get_w() const { return w_reg_; }
     void set_w(uint8_t v) { w_reg_ = v; }
     uint16_t pop_stack(StackContext context);
@@ -98,7 +100,9 @@ namespace sim::pic14::internal {
     static std::string_view stack_context_text(StackContext context);
 
   private:
+    sim::core::DeviceListener *listener_;
     sim::core::Clock *clock_;
+    NonVolatile *nv_;
     DataBus data_bus_;
     InterruptMux *interrupt_mux_;
 
@@ -107,17 +111,6 @@ namespace sim::pic14::internal {
     uint8_t w_reg_;
 
     bool in_sleep;
-  };
-
-  class Executor : public sim::core::Schedulable, public InterruptHandler {
-  public:
-    explicit Executor(Execution *ex) : execution_(ex) {}
-
-    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
-    void interrupted() override;
-
-  private:
-    Execution *execution_;
   };
 
 }  // namespace sim::pic14::internal

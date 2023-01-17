@@ -31,14 +31,14 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Execution::Execution(sim::core::DeviceListener *listener, sim::core::Clock *clock, const NonVolatile::Config &nv_config, DataBus &&data_bus, InterruptMux *interrupt_mux)
-    : Device(listener),
-      NonVolatile(nv_config),
+  Executor::Executor(sim::core::DeviceListener *listener, sim::core::Clock *clock, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
+    : listener_(listener),
       clock_(clock),
+      nv_(nv),
       data_bus_(std::move(data_bus)),
       interrupt_mux_(interrupt_mux) {}
 
-  void Execution::reset(uint8_t status) {
+  void Executor::reset(uint8_t status) {
     status_reg().reset(status);
     intcon_reg().reset();
 
@@ -47,23 +47,23 @@ namespace sim::pic14::internal {
     in_sleep = false;
   }
 
-  inline uint16_t Execution::pop_stack(Execution::StackContext context) {
+  inline uint16_t Executor::pop_stack(Executor::StackContext context) {
     if (sp_reg_ == 0) {
-      device_listener().invalid_internal_state(Status(Error::stack_underflow, stack_context_text(context)));
+      listener_->invalid_internal_state(Status(Error::stack_underflow, stack_context_text(context)));
     }
     sp_reg_ = (sp_reg_ + stack.size() - 1) % stack.size();
     return stack[sp_reg_];
   }
 
-  inline void Execution::push_stack(uint16_t pc, Execution::StackContext context) {
+  inline void Executor::push_stack(uint16_t pc, Executor::StackContext context) {
     stack[sp_reg_] = pc;
     sp_reg_ = (sp_reg_ + 1) % stack.size();
     if (sp_reg_ == 0) {
-      device_listener().invalid_internal_state(Status(Error::stack_overflow, stack_context_text(context)));
+      listener_->invalid_internal_state(Status(Error::stack_overflow, stack_context_text(context)));
     }
   }
 
-  sim::core::Advancement Execution::execute_to(const sim::core::SimulationLimit &limit) {
+  sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
     int i = 0;
 
     for (sim::core::Ticks at_tick = clock_->at(0); limit.end_tick < 0 || at_tick - limit.end_tick <= 0; at_tick = clock_->at(i)) {
@@ -75,13 +75,13 @@ namespace sim::pic14::internal {
     return {.at_tick = clock_->at(0), .next_tick = clock_->at(i)};
   }
 
-  sim::core::Ticks Execution::execute() {
-    if (is_in_icsp()) {
+  sim::core::Ticks Executor::execute() {
+    if (nv_->is_in_icsp()) {
       return 0;
     }
 
     if (interrupt_mux_->is_active()) {
-      auto intcon = Execution::intcon_reg();
+      auto intcon = intcon_reg();
 
       if (intcon.gie()) {
         push_stack(get_pc(), INTERRUPT);
@@ -97,10 +97,10 @@ namespace sim::pic14::internal {
     }
 
     uint16_t pc = get_pc();
-    uint16_t insn = progmem[pc];
+    uint16_t insn = nv_->progmem()[pc];
     set_pc(pc + 1);
 
-    auto status = Execution::status_reg();
+    auto status = status_reg();
 
     switch (insn & 0x3800) {
     case 0x0000:
@@ -404,23 +404,19 @@ namespace sim::pic14::internal {
     return get_pc() != pc + 1 ? 2 : 1;
   }
 
-  std::string_view Execution::stack_context_text(Execution::StackContext context) {
+  void Executor::interrupted() {
+    schedule_immediately();
+  }
+
+  std::string_view Executor::stack_context_text(Executor::StackContext context) {
     switch (context) {
-    case Execution::INTERRUPT: return "interrupt";
-    case Execution::CALL: return "call";
-    case Execution::RETFIE: return "retfie";
-    case Execution::RETURN: return "return";
-    case Execution::RETLW: return "retlw";
+    case Executor::INTERRUPT: return "interrupt";
+    case Executor::CALL: return "call";
+    case Executor::RETFIE: return "retfie";
+    case Executor::RETURN: return "return";
+    case Executor::RETLW: return "retlw";
     default: return "";
     }
-  }
-
-  sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
-    return execution_->execute_to(limit);
-  }
-
-  void Executor::interrupted() {
-    execution_->schedule_immediately();
   }
 
 }  // namespace sim::pic14::internal

@@ -31,11 +31,7 @@ namespace sim::pic14::internal {
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener)
-    : Execution(listener,
-                &fosc4_,
-                NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE},
-                build_data_bus(),
-                &interrupt_mux_),
+    : Device(listener),
       fosc4_{1000},
       clock_scheduler_(std::vector<sim::core::Clock*>{
         &fosc4_,
@@ -43,7 +39,14 @@ namespace sim::pic14::internal {
       interrupt_mux_(InterruptMux::InterruptSignal(&signal_queue_, std::to_array({
         &executor_,
       }))),
-      executor_(this),
+      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, NonVolatile::ResetSignal(&signal_queue_, std::to_array({
+        &executor_,
+      }))),
+      executor_(listener,
+                &fosc4_,
+                &nv_,
+                build_data_bus(),
+                &interrupt_mux_),
       ports_{
         internal::Port(0, listener),
         // PORTB is handled separately.
@@ -100,8 +103,8 @@ namespace sim::pic14::internal {
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   void P16F88X<ProgSize, EEDataSize, NumPorts>::reset(uint8_t status) {
-    Execution::reset(status);
     interrupt_mux_.reset();
+    executor_.reset(status);
     option_reg().reset();
   }
 
