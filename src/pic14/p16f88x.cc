@@ -44,6 +44,7 @@ namespace sim::pic14::internal {
       }),
       executor_(listener,
                 &fosc4_,
+                &clock_scheduler_,
                 &nv_,
                 build_data_bus(),
                 &interrupt_mux_),
