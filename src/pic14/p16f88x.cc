@@ -56,9 +56,9 @@ namespace sim::pic14::internal {
       },
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), option_reg()),
       pin_descrs_(build_pin_descrs()),
-      scheduler_(std::vector<sim::core::Schedulable*>{
+      scheduler_(std::to_array({
         &executor_,
-      }) {
+      })) {
     reset(0);
   }
 

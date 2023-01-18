@@ -78,11 +78,7 @@ namespace sim::core {
   public:
     template<typename C>
     explicit Scheduler(C objects)
-      : TaskQueue(std::begin(objects), std::end(objects)), all_(std::begin(objects), std::end(objects)) {
-      for (auto *o : all_) {
-        o->task_queue_ = this;
-      }
-    }
+      : Scheduler(std::begin(objects), std::end(objects)) {}
 
     template<typename I>
     Scheduler(I begin, I end)
