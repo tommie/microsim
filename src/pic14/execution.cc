@@ -45,6 +45,8 @@ namespace sim::pic14::internal {
     sp_reg_ = 0;
     w_reg_ = 0;
     in_sleep = false;
+
+    schedule_immediately();
   }
 
   inline uint16_t Executor::pop_stack(Executor::StackContext context) {

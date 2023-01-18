@@ -106,6 +106,8 @@ namespace sim::pic14::internal {
     interrupt_mux_.reset();
     executor_.reset(status);
     option_reg().reset();
+
+    schedule_immediately();
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
