@@ -35,10 +35,6 @@ namespace sim::pic14 {
           reset_(reset) {}
 
     public:
-      /// Returns whether the device is currently in ICSP mode. While
-      /// in this mode, no normal operations should run.
-      bool is_in_icsp() const { return in_icsp; }
-
       /// Enters ICSP mode, allowing programming the non-volatile
       /// memory. When the returned ICSP object is destroyed, the
       /// device leaves ICSP mode.
@@ -54,7 +50,6 @@ namespace sim::pic14 {
       std::u8string eedata_;
 
       sim::core::Signal<bool> *reset_;
-      bool in_icsp = false;
     };
 
   } // namespace internal
@@ -67,12 +62,11 @@ namespace sim::pic14 {
   class ICSP {
   public:
     ICSP(internal::NonVolatile *device) : device(device) {
-      device->in_icsp = true;
+      device->reset_->set(true);
     }
 
     ~ICSP() {
-      device->in_icsp = false;
-      device->reset_->set(true);
+      device->reset_->set(false);
     }
 
     /// Programs memory at the specified address. For 14-bit data

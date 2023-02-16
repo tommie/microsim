@@ -43,7 +43,8 @@ namespace sim::pic14 {
       void reset(uint8_t status);
 
     private:
-      sim::core::Signal<bool> reset_;
+      sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
+      sim::core::Signal<bool> *por_;
       sim::core::Clock fosc4_;
       sim::core::ClockScheduler clock_scheduler_;
 

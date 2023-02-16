@@ -32,15 +32,12 @@ namespace sim::pic14::internal {
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener)
     : Device(listener),
-      reset_([this](const bool &raised) {
+      reset_([this](bool raised) {
         if (!raised) {
-          interrupt_mux_.reset();
-          executor_.reset(0);
-          option_reg().reset();
-
-          schedule_immediately();
+          reset(0);
         }
-      }, true),
+      }, 2),
+      por_(reset_.make_signal(true)),
       fosc4_{1000},
       clock_scheduler_(std::vector<sim::core::Clock*>{
         &fosc4_,
@@ -48,7 +45,7 @@ namespace sim::pic14::internal {
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),
-      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, &reset_),
+      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, reset_.make_signal()),
       executor_(listener,
                 &fosc4_,
                 &clock_scheduler_,
@@ -66,9 +63,7 @@ namespace sim::pic14::internal {
       pin_descrs_(build_pin_descrs()),
       scheduler_(std::to_array({
         &executor_,
-      })) {
-    reset_.set(false);
-  }
+      })) {}
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {
@@ -120,6 +115,12 @@ namespace sim::pic14::internal {
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
+    if (por_->value()) {
+      por_->set(false);
+    }
+
+    if (reset_.value()) return {};
+
     auto adv = scheduler_.advance_to(limit);
     clock_scheduler_.advance_to(adv.at_tick);
     return adv;

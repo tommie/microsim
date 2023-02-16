@@ -81,7 +81,7 @@ namespace sim::pic14::internal {
       if (limit.cond && !limit.cond(at_tick)) break;
     }
 
-    if (nv_->is_in_icsp() || in_sleep) {
+    if (in_sleep) {
       return {.at_tick = at_tick, .next_tick = -1};
     }
 
@@ -89,10 +89,6 @@ namespace sim::pic14::internal {
   }
 
   sim::core::Ticks Executor::execute() {
-    if (nv_->is_in_icsp()) {
-      return 0;
-    }
-
     if (interrupt_mux_->is_active()) {
       auto intcon = intcon_reg();
 
