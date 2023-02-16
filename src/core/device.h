@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "../util/status.h"
-#include "scheduler.h"
 #include "simulation.h"
 
 namespace sim::core {
@@ -45,7 +44,7 @@ namespace sim::core {
     std::vector<std::string> path;
   };
 
-  class Device : public Schedulable {
+  class Device : public SimulationObject {
   public:
     Device(DeviceListener *listener);
     virtual ~Device() = default;

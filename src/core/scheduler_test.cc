@@ -53,14 +53,29 @@ namespace sim::core {
     if (got.at_tick != 3) fail("at_tick not 3");
     if (got.next_tick != 4) fail("next_tick not 4");
 
-    if (s.advance_calls != 4) fail("scheduler.next_tick not 4");
+    if (s.advance_calls != 4) fail("advance_calls not 4");
 
     s.at = 4;
     s.next = -1;
 
     got = scheduler.advance_to(SimulationLimit{.end_tick = 10, .cond = [](Ticks) { return false; }});
     if (got.at_tick != 4) fail("at_tick not 4");
-    if (s.advance_calls != 5) fail("scheduler.next_tick not 5");
+    if (s.advance_calls != 5) fail("advance_calls not 5");
+  }
+
+  SIM_TEST(SchedulerParentTest) {
+    TestSchedulable parent;
+    parent.next = -1;
+    Scheduler pscheduler(std::vector<Schedulable*>{&parent});
+
+    TestSchedulable s;
+    s.next = -1;
+    Scheduler scheduler(std::vector<Schedulable*>{&s}, &parent);
+
+    s.schedule_immediately();
+
+    pscheduler.advance_to({});
+    if (parent.advance_calls != 1) fail("advance_calls not 1");
   }
 
   SIM_TEST(SchedulerDoubleTest) {

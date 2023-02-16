@@ -31,10 +31,9 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Executor::Executor(sim::core::DeviceListener *listener, sim::core::Clock *clock, sim::core::ClockScheduler *clocks, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
+  Executor::Executor(sim::core::DeviceListener *listener, sim::core::Clock *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
     : listener_(listener),
-      clock_(clock),
-      clocks_(clocks),
+      fosc_(fosc),
       nv_(nv),
       data_bus_(std::move(data_bus)),
       interrupt_mux_(interrupt_mux) {}
@@ -67,25 +66,18 @@ namespace sim::pic14::internal {
   }
 
   sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
-    sim::core::Ticks at_tick = clock_->at(0);
+    sim::core::Ticks next_tick = fosc_->at(0);
 
-    while (limit.end_tick < 0 || at_tick - limit.end_tick <= 0) {
-      sim::core::Ticks n = execute();
+    while (limit.end_tick < 0 || next_tick - limit.end_tick <= 0) {
+      next_tick = fosc_->at(execute() * TICKS_PER_INSN);
 
-      at_tick = clock_->at(n);
-
-      // Reading e.g. TMR0 is based on clocks, so they need to be
-      // advanced for every instruction.
-      clocks_->advance_to(at_tick);
-
-      if (limit.cond && !limit.cond(at_tick)) break;
+      if (limit.cond && !limit.cond(next_tick)) break;
     }
 
-    if (in_sleep) {
-      return {.at_tick = at_tick, .next_tick = -1};
-    }
-
-    return {.at_tick = at_tick, .next_tick = clock_->at(1)};
+    return {
+      .at_tick = next_tick,
+      .next_tick = in_sleep ? -1 : next_tick,
+    };
   }
 
   sim::core::Ticks Executor::execute() {

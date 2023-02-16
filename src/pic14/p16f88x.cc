@@ -30,8 +30,9 @@ namespace sim::pic14::internal {
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener)
+  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener, sim::core::Clock *fosc)
     : Device(listener),
+      fosc_(fosc),
       reset_([this](bool raised) {
         if (!raised) {
           reset(0);
@@ -39,17 +40,12 @@ namespace sim::pic14::internal {
       }, 3),
       mclr_(reset_.make_signal()),
       por_(reset_.make_signal(true)),
-      fosc4_{1000},
-      clock_scheduler_(std::vector<sim::core::Clock*>{
-        &fosc4_,
-      }),
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),
       nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, reset_.make_signal()),
       executor_(listener,
-                &fosc4_,
-                &clock_scheduler_,
+                fosc_,
                 &nv_,
                 build_data_bus(),
                 &interrupt_mux_),
@@ -64,7 +60,7 @@ namespace sim::pic14::internal {
       pin_descrs_(build_pin_descrs()),
       scheduler_(std::to_array({
         &executor_,
-      })) {}
+      }), this) {}
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {
@@ -122,9 +118,7 @@ namespace sim::pic14::internal {
 
     if (reset_.value()) return {};
 
-    auto adv = scheduler_.advance_to(limit);
-    clock_scheduler_.advance_to(adv.at_tick);
-    return adv;
+    return scheduler_.advance_to(limit);
   }
 
   // Template instantiations for specific processors.

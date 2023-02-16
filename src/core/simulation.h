@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../util/status.h"
+#include "clock.h"
 #include "scheduler.h"
 
 namespace sim::core {
@@ -13,18 +14,46 @@ namespace sim::core {
   class SimulationObject : public Schedulable {
   public:
     virtual ~SimulationObject() = default;
+
+    /// Returns any clocks this device drives internally. They will
+    /// be added to the `Simulator`'s `ClockScheduler`.
+    virtual std::vector<Clock*> clock_sources() { return {}; }
   };
 
-  /// A scheduler can advance the state of objects.
-  class Simulator : public Scheduler {
+  /// A scheduler can advance the state of clocks and objects.
+  class Simulator {
   public:
-    explicit Simulator(const std::vector<SimulationObject*> &objects);
+    template<typename CC = std::initializer_list<Clock*>, typename OC = std::initializer_list<SimulationObject*>>
+    explicit Simulator(CC clocks, OC objects)
+      : cs_(std::begin(clocks), std::end(clocks)),
+        s_(std::begin(objects), std::end(objects)) {}
+
+    Advancement advance_to(const SimulationLimit &limit);
+
+  private:
+    ClockScheduler cs_;
+    Scheduler s_;
   };
 
   /// A collection of objects to simulate. This is a helper class to
-  /// manage the lifetime of objects.
+  /// build a `Simulator` and manage the lifetime of objects.
   class SimulationContext {
   public:
+    SimulationContext() = default;
+
+    template<typename CC = std::initializer_list<Clock*>, typename OC = std::initializer_list<SimulationObject*>>
+    SimulationContext(CC clocks, OC objects)
+      : clocks_(std::begin(clocks), std::end(clocks)),
+        objects_(std::begin(objects), std::end(objects)) {}
+
+    /// Adds a clock to be part of the simulation, as a borrowed
+    /// pointer.
+    void add_clock(Clock *c);
+
+    /// Adds a clock to be part of the simulation, as a transferring
+    /// ownership.
+    void add_clock(std::unique_ptr<Clock> c);
+
     /// Adds an object to be part of the simulation, as a borrowed
     /// pointer.
     void add_object(SimulationObject *o);
@@ -35,9 +64,12 @@ namespace sim::core {
 
     /// Creates a simulator, borrowing object pointers from this
     /// context.
-    Simulator make_simulator() { return Simulator(objects_); }
+    Simulator make_simulator() { return Simulator(clocks_, objects_); }
 
   private:
+    std::vector<Clock*> clocks_;
+    std::vector<std::unique_ptr<Clock>> owned_clocks_;
+
     std::vector<SimulationObject*> objects_;
     std::vector<std::unique_ptr<SimulationObject>> owned_objects_;
   };

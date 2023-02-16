@@ -25,7 +25,7 @@ namespace sim::pic14 {
       static const uint16_t CONFIG_SIZE = 9;
 
     public:
-      explicit P16F88X(core::DeviceListener *listener);
+      explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *fosc);
 
       sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
 
@@ -44,11 +44,10 @@ namespace sim::pic14 {
       void reset(uint8_t status);
 
     private:
+      sim::core::Clock *fosc_;
       sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
       sim::core::Signal<bool> *mclr_;
       sim::core::Signal<bool> *por_;
-      sim::core::Clock fosc4_;
-      sim::core::ClockScheduler clock_scheduler_;
 
       internal::InterruptMux interrupt_mux_;
       internal::NonVolatile nv_;

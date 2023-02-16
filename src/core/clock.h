@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "simulation.h"
+#include "scheduler.h"
 
 namespace sim::core {
 
@@ -44,8 +44,8 @@ namespace sim::core {
   /// require virtual calls.)
   class ClockScheduler {
   public:
-    template<typename C>
-    explicit ClockScheduler(C clocks) : clocks_(clocks) {}
+    template<typename I>
+    ClockScheduler(I begin, I end) : clocks_(begin, end) {}
 
     /// Advances the clocks of the scheduler so that `at(0)` returns
     /// some time at or after `end_tick`.

@@ -40,6 +40,7 @@ namespace sim::pic14::internal {
 
   class Executor : public sim::core::Schedulable {
     static const int STACK_SIZE = 8;
+    static const sim::core::Ticks TICKS_PER_INSN = 4;
 
     enum StackContext {
       INTERRUPT = 1,
@@ -52,7 +53,7 @@ namespace sim::pic14::internal {
   public:
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
-    Executor(sim::core::DeviceListener *listener, sim::core::Clock *clock, sim::core::ClockScheduler *clocks, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
+    Executor(sim::core::DeviceListener *listener, sim::core::Clock *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
@@ -98,8 +99,7 @@ namespace sim::pic14::internal {
 
   private:
     sim::core::DeviceListener *listener_;
-    sim::core::Clock *clock_;
-    sim::core::ClockScheduler *clocks_;
+    sim::core::Clock *fosc_;
     NonVolatile *nv_;
     DataBus data_bus_;
     InterruptMux *interrupt_mux_;

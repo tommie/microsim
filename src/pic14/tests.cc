@@ -35,9 +35,10 @@ template<typename Proc>
 class ProcessorTestCase : public sim::testing::TestCase {
 public:
   ProcessorTestCase(std::string_view firmware)
-    : firmware_(firmware), proc(&listener) {
+    : firmware_(firmware), fosc_(1), proc(&listener_, &fosc_),
+      sim_({&fosc_}, {&proc}) {
     for (const auto &descr : proc.pins()) {
-      listener.pin_descrs[descr.pin] = descr;
+      listener_.pin_descrs[descr.pin] = descr;
       pins[descr.name] = descr.pin;
     }
   }
@@ -45,11 +46,19 @@ public:
 protected:
   void advance_until_sleep() {
     sim::core::SimulationLimit limit = {
-      .cond = [this](sim::core::Ticks at_tick) { return !proc.is_sleeping(); },
+      .end_tick = -1,
+      .cond = [this](sim::core::Ticks at_tick) {
+        return !proc.is_sleeping();
+      },
     };
     for (;;) {
-      proc.advance_to(limit);
-      if (proc.is_sleeping()) return;
+      auto adv = sim_.advance_to(limit);
+
+      if (adv.next_tick < 0) {
+        if (!proc.is_sleeping())
+          std::abort();  // The simulation cannot make progress, but the processor is not sleeping.
+        return;
+      }
     }
   }
 
@@ -62,11 +71,15 @@ protected:
 
 private:
   std::string_view firmware_;
-  DeviceListener listener;
+  DeviceListener listener_;
+  sim::core::Clock fosc_;
 
 protected:
   Proc proc;
   std::unordered_map<std::string, sim::core::Pin*> pins;
+
+private:
+  sim::core::Simulator sim_;
 };
 
 #define PROCESSOR_TEST(Name, Proc, Firmware) \
