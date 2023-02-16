@@ -6,6 +6,7 @@
 #include <string_view>
 #include <system_error>
 
+#include "../core/signal.h"
 #include "../util/status.h"
 
 namespace sim::pic14 {
@@ -21,19 +22,17 @@ namespace sim::pic14 {
       friend class sim::pic14::ICSP;
 
     public:
-      using ResetSignal = std::function<void()>;
-
       struct Config {
         uint16_t prog_size;
         uint16_t config_size;
         uint16_t eedata_size;
       };
 
-      NonVolatile(const Config &config, ResetSignal reset)
+      NonVolatile(const Config &config, core::Signal<bool> *reset)
         : progmem_(config.prog_size, 0x3FFF),
           config_(config.config_size, 0x3FFF),
           eedata_(config.eedata_size, 0xFF),
-          reset_(std::move(reset)) {}
+          reset_(reset) {}
 
     public:
       /// Returns whether the device is currently in ICSP mode. While
@@ -54,7 +53,7 @@ namespace sim::pic14 {
       std::u16string config_;
       std::u8string eedata_;
 
-      ResetSignal reset_;
+      sim::core::Signal<bool> *reset_;
       bool in_icsp = false;
     };
 
@@ -73,7 +72,7 @@ namespace sim::pic14 {
 
     ~ICSP() {
       device->in_icsp = false;
-      device->reset_();
+      device->reset_->set(true);
     }
 
     /// Programs memory at the specified address. For 14-bit data

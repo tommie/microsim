@@ -78,9 +78,6 @@ namespace sim::pic14::internal {
     /// Implements InterruptMux::InterruptSignal.
     void interrupted();
 
-    /// Implements NonVolatile::ResetSignal..
-    void icsp_reset() { reset(0); }
-
   protected:
     /// Implements Schedulable.
     sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;

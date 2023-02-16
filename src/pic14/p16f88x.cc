@@ -32,6 +32,15 @@ namespace sim::pic14::internal {
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener)
     : Device(listener),
+      reset_([this](const bool &raised) {
+        if (!raised) {
+          interrupt_mux_.reset();
+          executor_.reset(0);
+          option_reg().reset();
+
+          schedule_immediately();
+        }
+      }, true),
       fosc4_{1000},
       clock_scheduler_(std::vector<sim::core::Clock*>{
         &fosc4_,
@@ -39,9 +48,7 @@ namespace sim::pic14::internal {
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),
-      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, [this]() {
-        executor_.icsp_reset();
-      }),
+      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, &reset_),
       executor_(listener,
                 &fosc4_,
                 &clock_scheduler_,
@@ -60,7 +67,7 @@ namespace sim::pic14::internal {
       scheduler_(std::to_array({
         &executor_,
       })) {
-    reset(0);
+    reset_.set(false);
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
