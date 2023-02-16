@@ -1,0 +1,25 @@
+ifeq ($(host),wasm32-unknown-unknown)
+AR = emar
+CXX = em++
+LDFLAGS = -sLLD_REPORT_UNDEFINED -sSTRICT_JS -sINCOMING_MODULE_JS_API=noExitRuntime,noInitialRun,onAbort,onRuntimeInitialized,print,printErr -fsanitize=address
+EXEEXT = .js
+TESTRUNNER = nodejs
+else
+AR = ar
+CXX = clang++
+export CPLUS_INCLUDE_PATH = /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/11:/usr/include/x86_64-linux-gnu/c++/11
+endif
+
+LD = $(CXX)
+CXXFLAGS = -Wall -std=c++20 -g -fsanitize=address
+LDFLAGS = -fsanitize=address
+
+
+%_test$(EXEEXT): LDADD += libcore.a ../testing/libtesting.a
+
+%$(EXEEXT): %.o
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDADD)
+
+ifeq ($(host),wasm32-unknown-unknown)
+%.wasm: %$(EXEEXT)
+endif

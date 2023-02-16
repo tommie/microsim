@@ -13,7 +13,7 @@
 template<typename Proc>
 sim::util::Status load_testdata_ihex(Proc *proc, std::string_view path) {
   auto icsp = proc->enter_icsp();
-  std::ifstream ihex(path);
+  std::ifstream ihex(static_cast<std::string>(path));
 
   if (!ihex) {
     return sim::util::Status(std::error_code(errno, std::system_category()), path);

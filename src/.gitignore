@@ -5,5 +5,7 @@ lib*.a
 *.o
 *.wasm
 
+tests
 tests.js
+*_test
 *_test.js

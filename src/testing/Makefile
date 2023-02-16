@@ -1,6 +1,4 @@
-AR = emar
-CXX = em++
-CXXFLAGS = -Wall -std=c++20 -g -fsanitize=address
+include ../../Makefile.common
 
 .PHONY: all
 all: libtesting.a
