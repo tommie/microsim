@@ -31,6 +31,7 @@ namespace sim::pic14 {
 
       ICSP enter_icsp() { return nv_.enter_icsp(); }
       bool is_sleeping() const { return executor_.is_sleeping(); }
+      sim::core::Signal<bool>* mclr() { return mclr_; }
       const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
 
     private:
@@ -44,6 +45,7 @@ namespace sim::pic14 {
 
     private:
       sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
+      sim::core::Signal<bool> *mclr_;
       sim::core::Signal<bool> *por_;
       sim::core::Clock fosc4_;
       sim::core::ClockScheduler clock_scheduler_;

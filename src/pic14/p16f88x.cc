@@ -36,7 +36,8 @@ namespace sim::pic14::internal {
         if (!raised) {
           reset(0);
         }
-      }, 2),
+      }, 3),
+      mclr_(reset_.make_signal()),
       por_(reset_.make_signal(true)),
       fosc4_{1000},
       clock_scheduler_(std::vector<sim::core::Clock*>{
