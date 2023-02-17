@@ -15,30 +15,30 @@
 
 namespace sim::pic14::internal {
 
-  class StatusReg : public BitRegister<0x03> {
+  template<typename Backend>
+  class StatusRegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
   public:
     enum Bits {
       C, DC, Z, PD, TO, RP0, RP1, IRP,
     };
 
-    explicit StatusReg(DataBus *bus) : BitRegister(bus) {}
+    explicit StatusRegBase(Backend backend) : BitRegister<Backend>(backend) {}
 
-    uint16_t rp() const { return static_cast<uint16_t>(const_bit_field<RP0, 2>()) << 7; }
+    uint16_t rp() const { return static_cast<uint16_t>(Base::template bit_field<RP0, 2>()) << 7; }
 
-    bool c() const { return const_bit<C>(); }
-    void set_c(bool v) { set_bit<C>(v); }
+    bool c() const { return Base::template bit<C>(); }
+    void set_c(bool v) { Base::template set_bit<C>(v); }
 
-    /// Updates the status register for a reset. Only PD and TO bits
-    /// in `inv_v` are preserved, and they are first inverted.
-    void reset(uint8_t inv_v);
+    void set_reset(uint8_t inv_v) {
+      Base::template set_masked<(1 << PD) | (1 << TO)>(~inv_v);
+    }
 
-    void update_reset(uint8_t inv_v);
-    void update_add(uint8_t a, uint8_t b);
-    void update_sub(uint8_t a, uint8_t b);
-    void update_logic(uint8_t v);
+    void reset() { Base::template clear_bitfield<RP0, 3>(); }
   };
 
-  class Executor : public sim::core::Schedulable {
+  class Executor : public sim::core::Schedulable, public RegisterBackend {
     static const int STACK_SIZE = 8;
     static const sim::core::Ticks TICKS_PER_INSN = 4;
 
@@ -50,7 +50,20 @@ namespace sim::pic14::internal {
       RETLW,
     };
 
+    class StatusRegImpl : public StatusRegBase<SingleRegisterBackend<uint8_t>> {
+    public:
+      using StatusRegBase<SingleRegisterBackend<uint8_t>>::StatusRegBase;
+
+      void update_add(uint8_t a, uint8_t b);
+      void update_sub(uint8_t a, uint8_t b);
+      void update_logic(uint8_t v);
+    };
+
   public:
+    using RegisterType = uint8_t;
+    using RegisterAddressType = uint16_t;
+    using StatusReg = StatusRegBase<MultiRegisterBackend<Executor, 0x03>>;
+
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
     Executor(sim::core::DeviceListener *listener, sim::core::Clock *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
@@ -59,9 +72,8 @@ namespace sim::pic14::internal {
     /// it took.
     sim::core::Ticks execute();
 
-    /// Resets the execution unit, including register values. `status`
-    /// is a mask of TO and PD bits to set.
-    void reset(uint8_t status);
+    /// Resets the execution unit, including its register values.
+    void reset();
 
     /// Returns whether the execution unit is sleeping. It can only be
     /// awaken by interrupts, or a reset.
@@ -70,14 +82,13 @@ namespace sim::pic14::internal {
     const DataBus& data_bus() const { return data_bus_; }
     DataBus& data_bus() { return data_bus_; }
 
-    const StatusReg status_reg() const { return StatusReg(const_cast<DataBus*>(&data_bus_)); }
-    StatusReg status_reg() { return StatusReg(&data_bus_); }
+    StatusReg status_reg() { return StatusReg(MultiRegisterBackend<Executor, 0x03>(this)); }
 
-    const IntConReg intcon_reg() const { return IntConReg(const_cast<DataBus*>(&data_bus_)); }
-    IntConReg intcon_reg() { return IntConReg(&data_bus_); }
-
-    /// Implements InterruptMux::InterruptSignal.
+    /// Informs the executor of an active interrupt condition.
     void interrupted();
+
+    uint8_t read_register(uint16_t addr) override;
+    void write_register(uint16_t addr, uint8_t value) override;
 
   protected:
     /// Implements Schedulable.
@@ -93,7 +104,7 @@ namespace sim::pic14::internal {
     uint16_t pop_stack(StackContext context);
     void push_stack(uint16_t pc, StackContext context);
 
-    uint16_t banked_data_addr(uint8_t addr) const { return status_reg().rp() | addr; }
+    uint16_t banked_data_addr(uint8_t addr) const { return status_reg_.rp() | addr; }
 
     static std::string_view stack_context_text(StackContext context);
 
@@ -107,6 +118,7 @@ namespace sim::pic14::internal {
     std::array<uint16_t, STACK_SIZE> stack;
     uint8_t sp_reg_;
     uint8_t w_reg_;
+    StatusRegImpl status_reg_;
 
     bool in_sleep;
   };

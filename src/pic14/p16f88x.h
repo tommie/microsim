@@ -3,6 +3,7 @@
 
 #include "../core/device.h"
 #include "../core/scheduler.h"
+#include "core.h"
 #include "execution.h"
 #include "port.h"
 #include "register.h"
@@ -38,10 +39,7 @@ namespace sim::pic14 {
       internal::DataBus build_data_bus();
       std::vector<sim::core::PinDescriptor> build_pin_descrs();
 
-      const OptionReg option_reg() const { return OptionReg(const_cast<DataBus*>(&executor_.data_bus())); }
-      OptionReg option_reg() { return OptionReg(&executor_.data_bus()); }
-
-      void reset(uint8_t status);
+      void reset();
 
     private:
       sim::core::Clock *fosc_;
@@ -49,6 +47,7 @@ namespace sim::pic14 {
       sim::core::Signal<bool> *mclr_;
       sim::core::Signal<bool> *por_;
 
+      internal::Core core_;
       internal::InterruptMux interrupt_mux_;
       internal::NonVolatile nv_;
       internal::Executor executor_;

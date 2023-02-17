@@ -2,6 +2,7 @@
 #define sim_pic14_port_h
 
 #include "../core/device.h"
+#include "core.h"
 #include "execution.h"
 #include "interrupt.h"
 #include "register.h"
@@ -103,7 +104,7 @@ namespace sim::pic14::internal {
                       sim::core::DeviceListener *listener,
                       InterruptMux::MaskableIntconEdgeSignal &&change,
                       InterruptMux::MaskableIntconEdgeSignal &&interrupt,
-                      OptionReg &&option_reg);
+                      Core::OptionReg &&option_reg);
 
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;
@@ -114,7 +115,7 @@ namespace sim::pic14::internal {
   private:
     InterruptMux::MaskableIntconEdgeSignal change_;
     InterruptMux::MaskableIntconEdgeSignal interrupt_;
-    OptionReg option_reg_;
+    Core::OptionReg option_reg_;
     uint8_t ioc_ = 0;
     uint8_t wpu_ = 0xFF;
   };

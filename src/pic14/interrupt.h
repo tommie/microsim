@@ -11,23 +11,41 @@
 
 namespace sim::pic14::internal {
 
-  class IntConReg : protected BitRegister<0x0B> {
+  template<typename Backend>
+  class IntConRegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
   public:
-    explicit IntConReg(DataBus *bus) : BitRegister(bus) {}
+    enum Bits {
+      RBIF, INTF, T0IF, RBIE, INTE, T0IE, PEIE, GIE,
+    };
 
-    bool gie() { return bit<7>(); }
-    void set_gie(bool v) { set_bit<7>(v); }
+    explicit IntConRegBase(Backend backend) : BitRegister<Backend>(backend) {}
 
-    void reset() { write(0); }
+    bool rbif() const { return Base::template bit<RBIF>(); }
+    bool intf() const { return Base::template bit<INTF>(); }
+    bool t0if() const { return Base::template bit<T0IF>(); }
+    bool rbie() const { return Base::template bit<RBIE>(); }
+    bool inte() const { return Base::template bit<INTE>(); }
+    bool t0ie() const { return Base::template bit<T0IE>(); }
+    bool peie() const { return Base::template bit<PEIE>(); }
+
+    bool gie() const { return Base::template bit<GIE>(); }
+    void set_gie(bool v) { Base::template set_bit<GIE>(v); }
+
+    void reset() { Base::template clear_bitfield<1, 7>(); }
   };
 
   /// An interrupt multiplexer that is active if any signal is
   /// raised.
   class InterruptMux : public RegisterBackend {
-    static const int GIEBit = 7;
+    using IntConRegImpl = IntConRegBase<SingleRegisterBackend<uint8_t>>;
 
   public:
+    using RegisterType = uint8_t;
+    using RegisterAddressType = uint16_t;
     using InterruptSignal = std::function<void()>;
+    using IntConReg = IntConRegBase<MultiRegisterBackend<InterruptMux, 0x0B>>;
 
     class MaskableIntconEdgeSignal {
     public:
@@ -48,7 +66,9 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
-    explicit InterruptMux(InterruptSignal interrupt) : interrupt_(std::move(interrupt)) {}
+    explicit InterruptMux(InterruptSignal interrupt)
+      : interrupt_(std::move(interrupt)),
+        intcon_(SingleRegisterBackend<uint8_t>(0)) {}
 
     /// Creates an interrupt signal masked by the INTCON `en_bit`,
     /// using `flag_bit` as the flag. Calling `raise()` multiple times
@@ -62,6 +82,8 @@ namespace sim::pic14::internal {
     /// Performs a device reset on the interrupt mux.
     void reset();
 
+    IntConReg intcon_reg() { return IntConReg(MultiRegisterBackend<InterruptMux, 0x0B>(this)); }
+
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;
 
@@ -73,7 +95,7 @@ namespace sim::pic14::internal {
   private:
     InterruptSignal interrupt_;
 
-    uint8_t intcon_ = 0;
+    IntConRegImpl intcon_;
     std::array<uint8_t, 2> pie_ = {0, 0};
     std::array<uint8_t, 2> pir_ = {0, 0};
 

@@ -4,7 +4,7 @@ namespace sim::pic14::internal {
 
   void InterruptMux::MaskableIntconEdgeSignal::raise() {
     if (!active_) {
-      mux_->intcon_ |= flag_mask_;
+      mux_->intcon_.set_flags(flag_mask_);
       active_ = true;
 
       if (mux_->is_active()) mux_->interrupt_();
@@ -20,8 +20,8 @@ namespace sim::pic14::internal {
     for (size_t i = 0; i < intcon_en_bits_.size(); ++i) {
       uint8_t en_bit = intcon_en_bits_[i];
       if (en_bit == 0xFF) continue;
-      if (!(intcon_ & (1u << i))) continue;
-      if (intcon_ & (1u << en_bit)) return true;
+      if (!intcon_.any_flag_set(1u << i)) continue;
+      if (intcon_.any_flag_set(1u << en_bit)) return true;
     }
 
     for (size_t i = 0; i < pie_.size(); ++i) {
@@ -32,14 +32,14 @@ namespace sim::pic14::internal {
   }
 
   void InterruptMux::reset() {
-    intcon_ = 0;
+    intcon_.reset();
     for (size_t i = 0; i < pie_.size(); ++i) pie_[i] = 0;
     for (size_t i = 0; i < pir_.size(); ++i) pir_[i] = 0;
   }
 
   uint8_t InterruptMux::read_register(uint16_t addr) {
     if (addr == 0x0B) {
-      return intcon_;
+      return intcon_.read();
     } else if (addr >= 0x0C && addr < 0x0C + pir_.size()) {
       return pir_[addr - 0x0C];
     } else if (addr >= 0x8C && addr < 0x8C + pie_.size()) {
@@ -51,7 +51,7 @@ namespace sim::pic14::internal {
 
   void InterruptMux::write_register(uint16_t addr, uint8_t value) {
     if (addr == 0x0B) {
-      intcon_ = value;
+      intcon_.write(value);
     } else if (addr >= 0x0C && addr < 0x0C + pir_.size()) {
       pir_[addr - 0x0C] = value;
     } else if (addr >= 0x8C && addr < 0x8C + pie_.size()) {

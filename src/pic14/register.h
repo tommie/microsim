@@ -5,34 +5,76 @@
 #include <string>
 #include <vector>
 
-#include "data_bus.h"
-
 namespace sim::pic14::internal {
+
+  /// A backend for a simple BitRegister using a trivial type. This
+  /// can be useful as the underlying implementation of a
+  /// `RegisterBackend` even if external access is handled through
+  /// `MultiRegisterBackend`.
+  template<typename Type>
+  class SingleRegisterBackend {
+  public:
+    using RegisterType = Type;
+
+    explicit SingleRegisterBackend(Type initial)
+      : value_(initial) {}
+
+    Type read() const { return value_; }
+    void write(Type v) { value_ = v; }
+
+  private:
+    Type value_;
+  };
+
+  /// A backend for a BitRegister that updates a
+  /// `RegisterBackend`. Use this for registers that may trigger
+  /// changes in other modules, e.g. interrupts.
+  template<typename Backend, typename Backend::RegisterAddressType Addr>
+  class MultiRegisterBackend {
+  public:
+    using RegisterType = typename Backend::RegisterType;
+
+    explicit MultiRegisterBackend(Backend *backend)
+      : backend_(backend) {}
+
+    RegisterType read() { return backend_->read_register(Addr); }
+    RegisterType read() const { return backend_->read_register(Addr); }
+    void write(const RegisterType &v) { backend_->write_register(Addr, v); }
+
+  private:
+    Backend *backend_;
+  };
 
   /// A register accessor and manipulation facade. This is intended as
   /// a base class for concrete register.
-  template<uint16_t Addr>
+  template<typename Backend>
   class BitRegister {
+    using value_type = typename Backend::RegisterType;
+
+  public:
+    value_type read() { return backend_.read(); }
+    value_type read() const { return backend_.read(); }
+    void write(value_type v) { backend_.write(v); }
+
+    bool all_flags_set(uint8_t mask) { return (read() & mask) == mask; }
+    bool all_flags_set(uint8_t mask) const { return (read() & mask) == mask; }
+    bool any_flag_set(uint8_t mask) { return (read() & mask) != 0; }
+    bool any_flag_set(uint8_t mask) const { return (read() & mask) != 0; }
+
+    void set_flags(uint8_t mask) { write(read() | mask); }
+
   protected:
-    static const uint16_t ADDR = Addr;
+    explicit BitRegister(Backend backend)
+      : backend_(backend) {}
 
-    explicit BitRegister(DataBus *bus) : bus_(bus) {}
+    template<int Lowest, int Size> value_type bit_field() { return (read() >> Lowest) & ((1u << Size) - 1); }
+    template<int Lowest, int Size> value_type bit_field() const { return (read() >> Lowest) & ((1u << Size) - 1); }
 
-    uint8_t const_read() const { return bus_->const_read_register(ADDR); }
-    uint8_t read() { return bus_->read_register(ADDR); }
-    void write(uint8_t v) { bus_->write_register(ADDR, v); }
+    template<int Lowest, int Size>
+    void clear_bitfield() { write(read() & ~(((1u << Size) - 1) << Lowest)); }
 
-    template<uint8_t Lowest, int Size>
-    uint8_t const_bit_field() const { return (const_read() >> Lowest) & ((1u << Size) - 1); }
-
-    template<uint8_t Lowest, int Size>
-    uint8_t bit_field() { return (read() >> Lowest) & ((1u << Size) - 1); }
-
-    template<uint8_t Bit>
-    bool const_bit() const { return (const_read() & (1u << Bit)) != 0; }
-
-    template<uint8_t Bit>
-    bool bit() { return (read() & (1u << Bit)) != 0; }
+    template<int Bit> bool bit() { return (read() & (1u << Bit)) != 0; }
+    template<int Bit> bool bit() const { return (read() & (1u << Bit)) != 0; }
 
     template<uint8_t Bit>
     void set_bit(bool v) {
@@ -57,26 +99,8 @@ namespace sim::pic14::internal {
     template<uint8_t Mask>
     void set_masked(uint8_t v) { write((read() & ~Mask) | v); }
 
-  private:
-    DataBus *bus_;
-  };
-
-  class OptionReg : public BitRegister<0x01> {
-  public:
-    enum Bits {
-      PS0, PS1, PS2, PSA, T0SE, T0CS, INTEDG, RBPU,
-    };
-
-    explicit OptionReg(DataBus *bus) : BitRegister(bus) {}
-
-    bool rbpu() const { return const_bit<RBPU>(); }
-    bool intedg() const { return const_bit<INTEDG>(); }
-    bool t0cs() const { return const_bit<T0CS>(); }
-    bool t0se() const { return const_bit<T0SE>(); }
-    bool psa() const { return const_bit<PSA>(); }
-    bool ps() const { return const_bit_field<PS0, 3>(); }
-
-    void reset() { write(0xFF); }
+  protected:
+    Backend backend_;
   };
 
 }  // namespace sim::pic14::internal

@@ -7,27 +7,19 @@ using sim::util::Status;
 
 namespace sim::pic14::internal {
 
-  void StatusReg::reset(uint8_t inv_v) {
-    write(~inv_v & ((1 << TO) | (1 << PD)));
-  }
-
-  inline void StatusReg::update_reset(uint8_t inv_v) {
-    set_masked<(1 << TO) | (1 << PD)>(~inv_v);
-  }
-
-  inline void StatusReg::update_add(uint8_t a, uint8_t b) {
+  inline void Executor::StatusRegImpl::update_add(uint8_t a, uint8_t b) {
     set_masked<(1 << C) | (1 << DC) | (1 << Z)>((static_cast<uint16_t>(a) + b > 0xFF ? (1 << C) : 0)
                                                 | ((a & 0x0F) + (b & 0x0F) > 0xF ? (1 << DC) : 0)
                                                 | (a + b == 0 ? (1 << Z) : 0));
   }
 
-  inline void StatusReg::update_sub(uint8_t a, uint8_t b) {
+  inline void Executor::StatusRegImpl::update_sub(uint8_t a, uint8_t b) {
     set_masked<(1 << C) | (1 << DC) | (1 << Z)>((b <= a ? (1 << C) : 0)
                                                 | ((b & 0x0F) <= (a & 0x0F) ? (1 << DC) : 0)
                                                 | (a == b ? (1 << Z) : 0));
   }
 
-  inline void StatusReg::update_logic(uint8_t v) {
+  inline void Executor::StatusRegImpl::update_logic(uint8_t v) {
     set_bit<Z>(v == 0);
   }
 
@@ -36,11 +28,11 @@ namespace sim::pic14::internal {
       fosc_(fosc),
       nv_(nv),
       data_bus_(std::move(data_bus)),
-      interrupt_mux_(interrupt_mux) {}
+      interrupt_mux_(interrupt_mux),
+      status_reg_(SingleRegisterBackend<uint8_t>((1u << StatusReg::PD) | (1u << StatusReg::TO))) {}
 
-  void Executor::reset(uint8_t status) {
-    status_reg().reset(status);
-    intcon_reg().reset();
+  void Executor::reset() {
+    status_reg_.reset();
 
     sp_reg_ = 0;
     w_reg_ = 0;
@@ -82,7 +74,7 @@ namespace sim::pic14::internal {
 
   sim::core::Ticks Executor::execute() {
     if (interrupt_mux_->is_active()) {
-      auto intcon = intcon_reg();
+      auto intcon = interrupt_mux_->intcon_reg();
 
       if (intcon.gie()) {
         push_stack(get_pc(), INTERRUPT);
@@ -101,8 +93,6 @@ namespace sim::pic14::internal {
     uint16_t insn = nv_->progmem()[pc];
     set_pc(pc + 1);
 
-    auto status = status_reg();
-
     switch (insn & 0x3800) {
     case 0x0000:
       switch (insn & 0x0700) {
@@ -120,13 +110,13 @@ namespace sim::pic14::internal {
           case 0x0064:
             // clrwdt: to, pd
             // TODO: clear WDT
-            status.update_reset(0);
+            status_reg_.set_reset(0);
             break;
 
           case 0x0009:
             // retfie
             set_pc(pop_stack(RETFIE));
-            intcon_reg().set_gie(true);
+            interrupt_mux_->intcon_reg().set_gie(true);
             break;
 
           case 0x0008:
@@ -138,7 +128,7 @@ namespace sim::pic14::internal {
             // sleep: to, pd
             if (!interrupt_mux_->is_active()) {
               in_sleep = true;
-              status.update_reset((1 << StatusReg::PD));
+              status_reg_.set_reset((1 << StatusReg::PD));
             }
             break;
           }
@@ -156,13 +146,13 @@ namespace sim::pic14::internal {
         case 0x0080:
           // clrf: z
           set_register(banked_data_addr(insn & 0x007F), 0);
-          status.update_logic(0);
+          status_reg_.update_logic(0);
           break;
 
         case 0x0000:
           // clrw: z
           set_w(0);
-          status.update_logic(0);
+          status_reg_.update_logic(0);
           break;
         }
         break;
@@ -176,38 +166,38 @@ namespace sim::pic14::internal {
         case 0x0200: {
           // subwf: c, dc, z
           uint8_t w = get_w();
-          status.update_sub(v, w);
+          status_reg_.update_sub(v, w);
           v -= w;
           break;
         }
         case 0x0300:
           // decf: z
           --v;
-          status.update_logic(v);
+          status_reg_.update_logic(v);
           break;
 
         case 0x0400:
           // iorwf: z
           v |= get_w();
-          status.update_logic(v);
+          status_reg_.update_logic(v);
           break;
 
         case 0x0500:
           // andwf: z
           v &= get_w();
-          status.update_logic(v);
+          status_reg_.update_logic(v);
           break;
 
         case 0x0600:
           // xorwf: z
           v ^= get_w();
-          status.update_logic(v);
+          status_reg_.update_logic(v);
           break;
 
         case 0x0700: {
           // addwf: c, dc, z
           uint8_t w = get_w();
-          status.update_add(v, w);
+          status_reg_.update_add(v, w);
           v += w;
           break;
         }
@@ -230,19 +220,19 @@ namespace sim::pic14::internal {
       switch (insn & 0x0700) {
       case 0x0000:
         // movf: z
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
 
       case 0x0100:
         // comf: z
         v = ~v;
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
 
       case 0x0200:
         // incf: z
         ++v;
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
 
       case 0x0300:
@@ -255,15 +245,15 @@ namespace sim::pic14::internal {
 
       case 0x0400: {
         // rrf: c
-        uint8_t c = status.c() ? 0x80 : 0;
-        status.set_c(v & 0x01);
+        uint8_t c = status_reg_.c() ? 0x80 : 0;
+        status_reg_.set_c(v & 0x01);
         v = (v >> 1) | c;
         break;
       }
       case 0x0500: {
         // rlf: c
-        uint8_t c = status.c() ? 1 : 0;
-        status.set_c(v & 0x80);
+        uint8_t c = status_reg_.c() ? 1 : 0;
+        status_reg_.set_c(v & 0x80);
         v = (v << 1) | c;
         break;
       }
@@ -359,21 +349,21 @@ namespace sim::pic14::internal {
         // iorlw: z
         uint8_t v = get_w() | (insn & 0x00FF);
         set_w(v);
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
       }
       case 0x0100: {
         // andlw: z
         uint8_t v = get_w() & (insn & 0x00FF);
         set_w(v);
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
       }
       case 0x0200: {
         // xorlw: z
         uint8_t v = get_w() ^ (insn & 0x00FF);
         set_w(v);
-        status.update_logic(v);
+        status_reg_.update_logic(v);
         break;
       }
       case 0x0300:
@@ -385,7 +375,7 @@ namespace sim::pic14::internal {
         // sublw: c, dc, z
         uint8_t w = get_w();
         uint8_t l = insn & 0x00FF;
-        status.update_sub(l, w);
+        status_reg_.update_sub(l, w);
         set_w(l - w);
         break;
       }
@@ -394,7 +384,7 @@ namespace sim::pic14::internal {
         // addlw: c, dc, z
         uint8_t w = get_w();
         uint8_t l = insn & 0x00FF;
-        status.update_add(l, w);
+        status_reg_.update_add(l, w);
         set_w(l + w);
         break;
       }
@@ -407,6 +397,19 @@ namespace sim::pic14::internal {
 
   void Executor::interrupted() {
     schedule_immediately();
+  }
+
+  uint8_t Executor::read_register(uint16_t addr) {
+    switch (addr) {
+    case 0x03: return status_reg_.read();
+    default: return 0;
+    }
+  }
+
+  void Executor::write_register(uint16_t addr, uint8_t value) {
+    switch (addr) {
+    case 0x03: status_reg_.write(value); break;
+    }
   }
 
   std::string_view Executor::stack_context_text(Executor::StackContext context) {
