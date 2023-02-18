@@ -65,9 +65,6 @@ namespace sim::core {
     if (adv.at_tick - at_tick_ < 0)
       std::abort();  // An object going back in time is a programming error.
 
-    if (adv.next_tick >= 0 && s->next_tick_ >= 0 && adv.next_tick - s->next_tick_ < 0)
-      std::abort();  // An object going back in time is a programming error.
-
     s->next_tick_ = adv.next_tick;
     if (adv.next_tick >= 0) {
       tick_queue_.emplace(adv.next_tick, s);
