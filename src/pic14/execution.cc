@@ -73,18 +73,6 @@ namespace sim::pic14::internal {
   }
 
   sim::core::Ticks Executor::execute() {
-    if (interrupt_mux_->is_active()) {
-      auto intcon = interrupt_mux_->intcon_reg();
-
-      if (intcon.gie()) {
-        push_stack(get_pc(), INTERRUPT);
-        set_pc(4);
-        intcon.set_gie(false);
-      }
-
-      in_sleep = false;
-    }
-
     if (in_sleep) {
       return 0;
     }
@@ -396,6 +384,16 @@ namespace sim::pic14::internal {
   }
 
   void Executor::interrupted() {
+    auto intcon = interrupt_mux_->intcon_reg();
+
+    if (intcon.gie()) {
+      push_stack(get_pc(), INTERRUPT);
+      set_pc(4);
+      intcon.set_gie(false);
+    }
+
+    in_sleep = false;
+
     schedule_immediately();
   }
 
