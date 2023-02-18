@@ -19,11 +19,13 @@ ifeq ($(host),wasm32-unknown-unknown)
 	rm -f tests.wasm
 endif
 
-libpic14.a: errors.o execution.o data_bus.o interrupt.o nonvolatile.o port.o p16f88x.o
+libpic14.a: core.o errors.o execution.o data_bus.o interrupt.o nonvolatile.o port.o p16f88x.o
 	$(AR) cr $@ $^
 
 tests$(EXEEXT): tests.o libpic14.a $(LDADD)
 	$(LD) $(LDFLAGS) $(CXXFLAGS) -o $@ $^ $(LDADD)
+
+core.o: core.cc core.h data_bus.h register.h
 
 errors.o: errors.cc errors.h
 

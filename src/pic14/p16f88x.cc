@@ -40,6 +40,7 @@ namespace sim::pic14::internal {
       }, 3),
       mclr_(reset_.make_signal()),
       por_(reset_.make_signal(true)),
+      core_([this]() {}),
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),
@@ -58,9 +59,9 @@ namespace sim::pic14::internal {
       },
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), core_.option_reg()),
       pin_descrs_(build_pin_descrs()),
-      scheduler_(std::to_array({
+      scheduler_({
         &executor_,
-      }), this) {}
+      }, this) {}
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {

@@ -1,6 +1,8 @@
 #ifndef sim_pic14_core_h
 #define sim_pic14_core_h
 
+#include <functional>
+
 #include "data_bus.h"
 #include "register.h"
 
@@ -32,30 +34,23 @@ namespace sim::pic14::internal {
   public:
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x01>>;
+    using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x81>>;
 
-    Core() : option_reg_(SingleRegisterBackend<uint8_t>(0xFF)) {}
+    explicit Core(std::function<void()> option_updated)
+      : option_updated_(std::move(option_updated)),
+        option_reg_(SingleRegisterBackend<uint8_t>(0xFF)) {}
 
     void reset() {
       option_reg_.reset();
     }
 
-    OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x01>(this)); }
+    OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
 
-    uint8_t read_register(uint16_t addr) override {
-      switch (addr) {
-      case 0x01: return option_reg_.read();
-      default: return 0;
-      }
-    }
-
-    void write_register(uint16_t addr, uint8_t value) override {
-      switch (addr) {
-      case 0x01: option_reg_.write(value); break;
-      }
-    }
+    uint8_t read_register(uint16_t addr) override;
+    void write_register(uint16_t addr, uint8_t value) override;
 
   private:
+    std::function<void()> option_updated_;
     OptionRegBase<SingleRegisterBackend<uint8_t>> option_reg_;
   };
 
