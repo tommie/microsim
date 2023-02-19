@@ -1,3 +1,5 @@
+SUBDIRS = testdata
+
 lib_LTLIBRARIES = libpic14.la
 
 libpic14_la_SOURCES = \

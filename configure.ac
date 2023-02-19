@@ -6,6 +6,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_PROG_AR
 AC_PROG_CXX
 LT_INIT
+AC_PATH_PROG([GPASM], [gpasm])
 
 # Emscripten flags:
 #   -sLLD_REPORT_UNDEFINED -sSTRICT_JS -sINCOMING_MODULE_JS_API=noExitRuntime,noInitialRun,onAbort,onRuntimeInitialized,print,printErr
