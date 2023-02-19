@@ -30,8 +30,3 @@ lib*.la
 *_test.js
 *_test.log
 *_test.trs
-
-tests
-tests.js
-tests.log
-tests.trs

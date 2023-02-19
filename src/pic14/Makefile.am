@@ -21,11 +21,11 @@ include_HEADERS = \
 	port.h \
 	register.h
 
-check_PROGRAMS = tests
+check_PROGRAMS = p16f88x_test
 
-tests_SOURCES = tests.cc
+p16f88x_test_SOURCES = p16f88x_test.cc
 
 test_libs = libpic14.la ../core/libcore.la ../testing/libtesting.la
-tests_LDADD = $(test_libs)
+p16f88x_test_LDADD = $(test_libs)
 
 TESTS = $(check_PROGRAMS)
