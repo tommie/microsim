@@ -26,13 +26,12 @@ namespace sim::pic14 {
       static const uint16_t CONFIG_SIZE = 9;
 
     public:
-      explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *fosc);
+      explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc);
 
       sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
 
-      ICSP enter_icsp() { return nv_.enter_icsp(); }
+      ICSP enter_icsp() { return core_.enter_icsp(); }
       bool is_sleeping() const { return executor_.is_sleeping(); }
-      sim::core::Signal<bool>* mclr() { return mclr_; }
       const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
 
     private:
@@ -42,14 +41,9 @@ namespace sim::pic14 {
       void reset();
 
     private:
-      sim::core::Clock *fosc_;
-      sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
-      sim::core::Signal<bool> *mclr_;
-      sim::core::Signal<bool> *por_;
-
+      internal::NonVolatile nv_;
       internal::Core core_;
       internal::InterruptMux interrupt_mux_;
-      internal::NonVolatile nv_;
       internal::Executor executor_;
       std::array<internal::Port, NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;

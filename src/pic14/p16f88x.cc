@@ -30,23 +30,19 @@ namespace sim::pic14::internal {
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener, sim::core::Clock *fosc)
+  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc)
     : Device(listener),
-      fosc_(fosc),
-      reset_([this](bool raised) {
+      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}),
+      core_(extosc, &nv_, [this](bool raised) {
         if (!raised) {
           reset();
         }
-      }, 3),
-      mclr_(reset_.make_signal()),
-      por_(reset_.make_signal(true)),
-      core_([this]() {}),
+      }, [this]() {}),
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),
-      nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}, reset_.make_signal()),
       executor_(listener,
-                fosc_,
+                core_.fosc(),
                 &nv_,
                 build_data_bus(),
                 &interrupt_mux_),
@@ -60,6 +56,7 @@ namespace sim::pic14::internal {
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), core_.option_reg()),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
+        &core_,
         &executor_,
       }, this) {}
 
@@ -83,6 +80,8 @@ namespace sim::pic14::internal {
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   std::vector<sim::core::PinDescriptor> P16F88X<ProgSize, EEDataSize, NumPorts>::build_pin_descrs() {
     std::vector<sim::core::PinDescriptor> descrs;
+
+    descrs.push_back({.pin = core_.mclr_pin(), .name = "MCLR"});
 
     std::string name_buf("RA0");
     for (auto &port : ports_) {
@@ -113,11 +112,9 @@ namespace sim::pic14::internal {
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
-    if (por_->value()) {
-      por_->set(false);
+    if (core_.in_reset()) {
+      return core_.advance_to(limit);
     }
-
-    if (reset_.value()) return {};
 
     return scheduler_.advance_to(limit);
   }
