@@ -1,5 +1,5 @@
-#ifndef sim_core_clock_domain_h
-#define sim_core_clock_domain_h
+#ifndef sim_core_clock_h
+#define sim_core_clock_h
 
 #include <vector>
 
@@ -61,4 +61,4 @@ namespace sim::core {
 
 }  // namespace sim::core
 
-#endif  // sim_core_clock_domain_h
+#endif  // sim_core_clock_h
