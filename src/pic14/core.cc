@@ -89,15 +89,12 @@ namespace sim::pic14::internal {
     }
   }
 
-  sim::core::Advancement Core::advance_to(const sim::core::SimulationLimit &limit) {
+  sim::core::Advancement Core::advance_to(const sim::core::AdvancementLimit &limit) {
     if (por_->value()) {
       por_->set(false);
     }
 
-    return {
-      .at_tick = fosc()->at(0),
-      .next_tick = -1,
-    };
+    return {};
   }
 
 }  // namespace sim::pic14::internal

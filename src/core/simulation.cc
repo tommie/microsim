@@ -2,12 +2,12 @@
 
 namespace sim::core {
 
-  Advancement Simulator::advance_to(const SimulationLimit &limit) {
-    SimulationLimit sublimit = limit;
+  Advancement Simulator::advance_to(const AdvancementLimit &limit) {
+    AdvancementLimit sublimit = limit;
 
-    sublimit.cond = [this, &limit](Ticks at_tick) {
-      cs_.advance_to(at_tick);
-      return !limit.cond || limit.cond(at_tick);
+    sublimit.advanced = [this, &limit](TimePoint at_time) {
+      cs_.advance_to(at_time);
+      if (limit.advanced) limit.advanced(at_time);
     };
 
     return s_.advance_to(sublimit);

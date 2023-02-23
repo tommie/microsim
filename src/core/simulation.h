@@ -25,12 +25,13 @@ namespace sim::core {
   public:
     template<typename CC = std::initializer_list<Clock*>, typename OC = std::initializer_list<SimulationObject*>>
     explicit Simulator(CC clocks, OC objects)
-      : cs_(std::begin(clocks), std::end(clocks)),
+      : cs_(&sim_clock_, std::begin(clocks), std::end(clocks)),
         s_(std::begin(objects), std::end(objects)) {}
 
-    Advancement advance_to(const SimulationLimit &limit);
+    Advancement advance_to(const AdvancementLimit &limit);
 
   private:
+    SimulationClock sim_clock_;
     ClockScheduler cs_;
     Scheduler s_;
   };

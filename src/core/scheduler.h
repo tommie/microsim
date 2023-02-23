@@ -6,34 +6,40 @@
 #include <unordered_set>
 #include <vector>
 
+#include "simtime.h"
+
 namespace sim::core {
 
   class TaskQueue;
 
-  /// A measurement of wall-clock time in unspecified units.
-  typedef long long Ticks;
+  struct AdvancementLimit {
+    /// The time at which to stop the simulation, or NEVER.
+    TimePoint end_time = SimulationClock::NEVER;
 
-  struct SimulationLimit {
-    /// The tick at which to stop simulation. -1 means no limit.
-    Ticks end_tick = -1;
+    /// If provided, simulation stops when it returns false. It is
+    /// always valid when used as argument to
+    /// `Schedulable::advance_to`.
+    ///
+    /// This function may be invoked any number of times during
+    /// `advance_to`; do not count invocations, except that before the
+    /// first invocation, some Schedulable will have been given a
+    /// chance to advance.
+    std::function<bool()> cond;
 
-    /// If provided, simulation stops when it returns false. The
-    /// argument is the number of ticks simulated so far. This
-    /// function may be invoked any number of times during
-    /// `advance_to`; do not count invocations.
-    std::function<bool(Ticks)> cond;
+    /// This function must be invoked after every time advancement. It
+    /// is provided as an alternative to returning from
+    /// `Schedulable::advance_to`, to avoid having to pop the call
+    /// stack all the way to the root after every instruction cycle.
+    std::function<void(TimePoint at_time)> advanced;
   };
 
   /// The result of a call to `advance_to`.
   struct Advancement {
-    /// The tick the schedulable is currently at. This is not used by
-    /// Scheduler, but is returned by it. It provides a lower bound on
-    /// all future possible ticks.
-    Ticks at_tick;
-
-    /// The tick when the schedulable needs to be advanced next. A
-    /// value of -1 means "never."
-    Ticks next_tick;
+    /// The time when the schedulable needs to be advanced next. This
+    /// may be before what the `Schedulable` returned previously, but
+    /// cannot be before the latest time provided to
+    /// `AdvancementLimit::advanced`.
+    TimePoint next_time = SimulationClock::NEVER;
   };
 
   /// An object driven by some clock.
@@ -43,7 +49,7 @@ namespace sim::core {
 
   public:
     /// Advances the object within the given limits.
-    virtual Advancement advance_to(const SimulationLimit &limit) = 0;
+    virtual Advancement advance_to(const AdvancementLimit &limit) = 0;
 
   protected:
     /// Makes the scheduler advance this schedulable ahead of the
@@ -53,7 +59,7 @@ namespace sim::core {
 
   private:
     TaskQueue *task_queue_ = nullptr;
-    Ticks next_tick_ = 0;
+    TimePoint next_time_ = {};
   };
 
   /// A set of tasks to run. Order is not guaranteed.
@@ -97,23 +103,17 @@ namespace sim::core {
     /// Invokes advance_to on the schedulables. This may run
     /// indefinitely if there keeps being things to do, and no limits
     /// have been set.
-    Advancement advance_to(const SimulationLimit &limit);
+    Advancement advance_to(const AdvancementLimit &limit);
 
   private:
-    Ticks next_tick() const {
-      if (!queue_.empty()) return at_tick_;
-
-      return tick_queue_.empty() ? -1 : tick_queue_.top().first;
-    }
-
-    void run_one(Schedulable *s, SimulationLimit &&limit);
+    TimePoint next_time() const;
+    void run_one(Schedulable *s, const AdvancementLimit &limit);
 
   private:
     std::vector<Schedulable*> all_;
-    std::priority_queue<std::pair<Ticks, Schedulable*>,
-                        std::vector<std::pair<Ticks, Schedulable*>>,
-                        std::greater<>> tick_queue_;
-    Ticks at_tick_ = 0;
+    std::priority_queue<std::pair<TimePoint, Schedulable*>,
+                        std::vector<std::pair<TimePoint, Schedulable*>>,
+                        std::greater<>> time_queue_;
   };
 
   inline void Schedulable::schedule_immediately() {

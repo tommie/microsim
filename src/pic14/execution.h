@@ -39,8 +39,8 @@ namespace sim::pic14::internal {
   };
 
   class Executor : public sim::core::Schedulable, public RegisterBackend {
-    static const int STACK_SIZE = 8;
-    static const sim::core::Ticks TICKS_PER_INSN = 4;
+    static constexpr int STACK_SIZE = 8;
+    static constexpr sim::core::Clock::duration TICKS_PER_INSN = sim::core::Clock::duration(4);
 
     enum StackContext {
       INTERRUPT = 1,
@@ -70,7 +70,7 @@ namespace sim::pic14::internal {
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
-    sim::core::Ticks execute();
+    int execute();
 
     /// Resets the execution unit, including its register values.
     void reset();
@@ -92,7 +92,7 @@ namespace sim::pic14::internal {
 
   protected:
     /// Implements Schedulable.
-    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+    sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
   private:
     uint8_t get_register(uint16_t addr) { return data_bus_.read_register(addr); }
@@ -110,7 +110,7 @@ namespace sim::pic14::internal {
 
   private:
     sim::core::DeviceListener *listener_;
-    sim::core::Clock *fosc_;
+    sim::core::ClockView fosc_;
     NonVolatile *nv_;
     DataBus data_bus_;
     InterruptMux *interrupt_mux_;

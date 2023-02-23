@@ -111,7 +111,7 @@ namespace sim::pic14::internal {
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::SimulationLimit &limit) {
+  sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::AdvancementLimit &limit) {
     if (core_.in_reset()) {
       return core_.advance_to(limit);
     }

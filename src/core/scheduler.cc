@@ -8,68 +8,72 @@ namespace sim::core {
     }
   }
 
-  Advancement Scheduler::advance_to(const SimulationLimit &limit) {
-    while ((!tick_queue_.empty() || !queue_.empty()) && (limit.end_tick < 0 || next_tick() < 0 || limit.end_tick - next_tick() >= 0)) {
+  Advancement Scheduler::advance_to(const AdvancementLimit &limit) {
+    for (;;) {
       if (!queue_.empty()) {
+        AdvancementLimit sublimit = {
+          .end_time = !time_queue_.empty() && (is_never(limit.end_time) || time_queue_.top().first < limit.end_time) ? time_queue_.top().first - Duration(1) : limit.end_time,
+          .cond = limit.cond,
+          .advanced = limit.advanced,
+        };
+
         while (!queue_.empty()) {
           std::unordered_set<Schedulable*> immediates;
           std::swap(queue_, immediates);
 
           for (auto *s : immediates) {
-            SimulationLimit sublimit = limit;
-            sublimit.end_tick = at_tick_;
-
-            run_one(s, std::move(sublimit));
+            run_one(s, sublimit);
           }
+
+          if (limit.cond && !limit.cond())
+            return { .next_time = next_time() };
         }
 
-        if (limit.cond && !limit.cond(at_tick_))
+        continue;
+      }
+
+      TimePoint prev_time = SimulationClock::NEVER;
+      while (!time_queue_.empty()) {
+        std::pair<TimePoint, Schedulable*> top = time_queue_.top();
+
+        if (!is_never(limit.end_time) && top.first > limit.end_time)
           break;
 
-        continue;
+        if (!is_never(prev_time) && top.first > prev_time) {
+          break;
+        }
+
+        time_queue_.pop();
+
+        if (top.second->next_time_ > top.first) {
+          // The scheduling was postponed.
+          continue;
+        }
+
+        enqueue(top.second);
+        prev_time = top.first;
+
+        if (limit.advanced) limit.advanced(top.first);
       }
 
-      std::pair<Ticks, Schedulable*> top = tick_queue_.top();
-      auto *s = top.second;
-
-      tick_queue_.pop();
-
-      if (top.second->next_tick_ - top.first > 0) {
-        // The scheduling was postponed.
-        continue;
-      }
-
-      SimulationLimit sublimit = limit;
-      sublimit.cond = [this, &limit](Ticks at_tick) {
-        // Always run limit.cond, since it may have side effects.
-        return (!limit.cond || limit.cond(at_tick)) && queue_.empty();
-      };
-      run_one(s, std::move(sublimit));
-
-      if (limit.cond && !limit.cond(at_tick_))
-        break;
+      if (queue_.empty())
+        return { .next_time = next_time() };
     }
-
-    return {
-      .at_tick = at_tick_,
-      .next_tick = next_tick(),
-    };
   }
 
-  inline void Scheduler::run_one(Schedulable *s, SimulationLimit &&limit) {
-    SimulationLimit sublimit = std::move(limit);
-    sublimit.end_tick = (limit.end_tick >= 0 ? std::min(limit.end_tick, next_tick()) : next_tick());
+  inline TimePoint Scheduler::next_time() const {
+    if (!queue_.empty()) return TimePoint(Duration(0));
 
-    Advancement adv = s->advance_to(sublimit);
+    return time_queue_.empty() ? SimulationClock::NEVER : time_queue_.top().first;
+  }
 
-    if (adv.at_tick - at_tick_ < 0)
-      std::abort();  // An object going back in time is a programming error.
+  inline void Scheduler::run_one(Schedulable *s, const AdvancementLimit &limit) {
+    Advancement adv = s->advance_to(limit);
 
-    s->next_tick_ = adv.next_tick;
-    if (adv.next_tick >= 0) {
-      tick_queue_.emplace(adv.next_tick, s);
+    s->next_time_ = adv.next_time;
+    if (!is_never(adv.next_time)) {
+      time_queue_.emplace(adv.next_time, s);
     }
-    at_tick_ = std::max(at_tick_, adv.at_tick);
   }
 
 }  // namespace sim::core

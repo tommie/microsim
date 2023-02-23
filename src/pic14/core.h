@@ -103,7 +103,7 @@ namespace sim::pic14::internal {
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;
 
-    sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+    sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
   private:
     sim::core::Clock *extosc_;

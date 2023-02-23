@@ -36,6 +36,7 @@ namespace sim::pic14::internal {
 
     sp_reg_ = 0;
     w_reg_ = 0;
+    fosc_.reset();
     in_sleep = false;
 
     schedule_immediately();
@@ -57,22 +58,17 @@ namespace sim::pic14::internal {
     }
   }
 
-  sim::core::Advancement Executor::advance_to(const sim::core::SimulationLimit &limit) {
-    sim::core::Ticks next_tick = fosc_->at(0);
+  sim::core::Advancement Executor::advance_to(const sim::core::AdvancementLimit &limit) {
+    auto delta = fosc_.delta();
 
-    while (limit.end_tick < 0 || next_tick - limit.end_tick <= 0) {
-      next_tick = fosc_->at(execute() * TICKS_PER_INSN);
-
-      if (limit.cond && !limit.cond(next_tick)) break;
+    if (delta >= TICKS_PER_INSN) {
+      fosc_.reset(delta - execute() * TICKS_PER_INSN);
     }
 
-    return {
-      .at_tick = next_tick,
-      .next_tick = in_sleep ? -1 : next_tick,
-    };
+    return { .next_time = in_sleep ? sim::core::SimulationClock::NEVER : fosc_.at(TICKS_PER_INSN) };
   }
 
-  sim::core::Ticks Executor::execute() {
+  int Executor::execute() {
     if (in_sleep) {
       return 0;
     }
@@ -392,6 +388,7 @@ namespace sim::pic14::internal {
       intcon.set_gie(false);
     }
 
+    if (in_sleep) fosc_.reset();
     in_sleep = false;
 
     schedule_immediately();

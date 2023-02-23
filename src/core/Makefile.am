@@ -5,6 +5,7 @@ libcore_la_SOURCES = \
 	ihex.cc \
 	scheduler.cc \
 	signal.cc \
+	simtime.cc \
 	simulation.cc
 
 include_HEADERS = \
@@ -13,6 +14,7 @@ include_HEADERS = \
 	ihex.h \
 	scheduler.h \
 	signal.h \
+	simtime.h \
 	simulation.h
 
 check_PROGRAMS = \

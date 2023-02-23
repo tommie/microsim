@@ -28,7 +28,7 @@ namespace sim::pic14 {
     public:
       explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc);
 
-      sim::core::Advancement advance_to(const sim::core::SimulationLimit &limit) override;
+      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
       ICSP enter_icsp() { return core_.enter_icsp(); }
       bool is_sleeping() const { return executor_.is_sleeping(); }
