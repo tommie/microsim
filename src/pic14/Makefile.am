@@ -27,7 +27,7 @@ check_PROGRAMS = p16f88x_test
 
 p16f88x_test_SOURCES = p16f88x_test.cc
 
-test_libs = libpic14.la ../core/libcore.la ../testing/libtesting.la
+test_libs = libpic14.la ../core/libcore.la ../util/libutil.la ../testing/libtesting.la
 p16f88x_test_LDADD = $(test_libs)
 
 TESTS = $(check_PROGRAMS)
