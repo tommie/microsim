@@ -33,6 +33,7 @@ namespace sim::pic14::internal {
 
   void Executor::reset() {
     status_reg_.reset();
+    set_pc(0);
 
     sp_reg_ = 0;
     w_reg_ = 0;
