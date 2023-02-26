@@ -9,7 +9,8 @@ libpic14_la_SOURCES = \
 	execution.cc \
 	interrupt.cc \
 	p16f88x.cc \
-	port.cc
+	port.cc \
+	timer0.cc
 
 include_HEADERS = \
 	core.h \
@@ -21,7 +22,8 @@ include_HEADERS = \
 	p16f88x.h \
 	pin.h \
 	port.h \
-	register.h
+	register.h \
+	timer0.h
 
 check_PROGRAMS = p16f88x_test
 

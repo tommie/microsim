@@ -12,6 +12,7 @@ namespace sim::pic14::internal {
     addrmap[0x82] = addrmap[0x102] = addrmap[0x182] = 0x02;
     addrmap[0x83] = addrmap[0x103] = addrmap[0x183] = 0x03;
     addrmap[0x84] = addrmap[0x104] = addrmap[0x184] = 0x04;
+    addrmap[0x101] = 0x01;
     addrmap[0x106] = 0x06;
     addrmap[0x186] = 0x86;
     addrmap[0x8A] = addrmap[0x10A] = addrmap[0x18A] = 0x0A;
@@ -37,8 +38,11 @@ namespace sim::pic14::internal {
         if (!raised) {
           reset();
         }
-      }, [this]() {}, [this]() {
+      }, [this]() {
+        timer0_.option_reg_updated();
+      }, [this]() {
         executor_.fosc_changed();
+        timer0_.fosc_changed();
       }),
       interrupt_mux_([this]() {
         executor_.interrupted();
@@ -48,6 +52,7 @@ namespace sim::pic14::internal {
                 &nv_,
                 build_data_bus(),
                 &interrupt_mux_),
+      timer0_(core_.fosc(), interrupt_mux_.make_maskable_edge_signal_intcon(5, 2), core_.option_reg()),
       ports_{
         internal::Port(0, listener),
         // PORTB is handled separately.
@@ -60,6 +65,7 @@ namespace sim::pic14::internal {
       scheduler_({
         &core_,
         &executor_,
+        &timer0_,
       }, this) {}
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
@@ -68,11 +74,12 @@ namespace sim::pic14::internal {
     std::u8string backmap(FILE_BUS_SIZE, 0xFF);
 
     // When this code runs, the backends have not yet been initialized. Only taking pointers.
+    backmap[0x01] = backs.size(); backs.push_back(&timer0_);
+    backmap[0x03] = backs.size(); backs.push_back(&executor_);
     backmap[0x05 + 0] = backmap[0x85 + 0] = backs.size(); backs.push_back(&ports_[0]);
     backmap[0x05 + 1] = backmap[0x85 + 1] = backmap[0x95] = backmap[0x96] = backs.size(); backs.push_back(&portb_);
     backmap[0x05 + 2] = backmap[0x85 + 2] = backs.size(); backs.push_back(&ports_[1]);
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
-    backmap[0x03] = backs.size(); backs.push_back(&executor_);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
     backmap[0x81] = backs.size(); backs.push_back(&core_);
 

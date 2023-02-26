@@ -6,9 +6,11 @@
 #include <sstream>
 
 #include "../core/ihex.h"
+#include "../core/trace.h"
 #include "../testing/testing.h"
 #include "../util/status.h"
 #include "p16f88x.h"
+
 
 template<typename Proc>
 sim::util::Status load_testdata_ihex(Proc *proc, std::string_view path) {
@@ -30,6 +32,30 @@ public:
 
   std::unordered_map<sim::core::Pin*, sim::core::PinDescriptor> pin_descrs;
 };
+
+void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) {
+  while (!buf.empty()) {
+    buf.top().visit<sim::core::ClockAdvancedTraceEntry,
+                    sim::core::SchedulableTraceEntry,
+                    sim::core::SimulationClockAdvancedTraceEntry,
+                    sim::core::SimulatorTraceEntry>([](const auto &e) {
+      using T = std::decay_t<decltype(e)>;
+      if constexpr (std::is_same_v<T, sim::core::ClockAdvancedTraceEntry>) {
+        std::cout << "Clock       " << e.clock() << " now=" << e.now().time_since_epoch().count() << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::core::SchedulableTraceEntry>) {
+        std::cout << "Schedulable " << e.schedulable() << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::core::SimulationClockAdvancedTraceEntry>) {
+        std::cout << "SimClock    now=" << e.now().time_since_epoch().count() << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::core::SimulatorTraceEntry>) {
+        std::cout << "Simulator   " << e.simulator() << std::endl;
+      } else {
+        std::cout << "Other(" << e.kind() << ")" << std::endl;
+      }
+    });
+
+    buf.pop();
+  }
+}
 
 template<typename Proc>
 class ProcessorTestCase : public sim::testing::TestCase {
@@ -56,6 +82,7 @@ protected:
 
     do {
       sim_.advance_to(limit);
+      dump_trace_buffer();
     } while (!proc.is_sleeping());
   }
 
@@ -69,6 +96,8 @@ protected:
     while (proc.is_sleeping()) {
       if (sim::core::is_never(sim_.advance_to(limit).next_time))
         std::abort();
+
+      dump_trace_buffer();
     }
   }
 
@@ -126,6 +155,22 @@ PROCESSOR_TEST(GlobalInterruptTest, P16F887, "testdata/gie.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after pin change");
+}
+
+PROCESSOR_TEST(Timer0Test, P16F887, "testdata/timer0.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
+}
+
+PROCESSOR_TEST(Timer0InterruptTest, P16F887, "testdata/t0if.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
 }
 
 int main() {
