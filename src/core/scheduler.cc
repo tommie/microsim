@@ -1,5 +1,7 @@
 #include "scheduler.h"
 
+#include "trace.h"
+
 namespace sim::core {
 
   Scheduler::~Scheduler() {
@@ -75,6 +77,8 @@ namespace sim::core {
   }
 
   inline void Scheduler::run_one(Schedulable *s, const AdvancementLimit &limit) {
+    trace_writer().emplace<SchedulableTraceEntry>(s);
+
     Advancement adv = s->advance_to(limit);
 
     s->next_time_ = adv.next_time;

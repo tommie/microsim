@@ -7,7 +7,8 @@ libcore_la_SOURCES = \
 	scheduler.cc \
 	signal.cc \
 	simtime.cc \
-	simulation.cc
+	simulation.cc \
+	trace.cc
 
 include_HEADERS = \
 	clock.h \
@@ -16,7 +17,8 @@ include_HEADERS = \
 	scheduler.h \
 	signal.h \
 	simtime.h \
-	simulation.h
+	simulation.h \
+	trace.h
 
 check_PROGRAMS = \
 	clock_test \

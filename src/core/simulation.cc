@@ -1,5 +1,7 @@
 #include "simulation.h"
 
+#include "trace.h"
+
 namespace sim::core {
 
   Advancement Simulator::advance_to(const AdvancementLimit &limit) {
@@ -9,6 +11,8 @@ namespace sim::core {
       cs_.advance_to(at_time);
       if (limit.advanced) limit.advanced(at_time);
     };
+
+    trace_writer().emplace<SimulatorTraceEntry>(this);
 
     return s_.advance_to(sublimit);
   }
