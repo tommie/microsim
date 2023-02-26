@@ -26,6 +26,11 @@ namespace sim::core {
     time_point now_;
   };
 
+  using Nanoseconds = std::chrono::nanoseconds;
+  using Microseconds = std::chrono::microseconds;
+  using Milliseconds = std::chrono::milliseconds;
+  using Seconds = std::chrono::seconds;
+
   using Duration = SimulationClock::duration;
   using TimePoint = SimulationClock::time_point;
 
