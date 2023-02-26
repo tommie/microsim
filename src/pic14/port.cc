@@ -38,13 +38,14 @@ namespace sim::pic14::internal {
         }
       }
 
-      output_ = value & ~tris_;
+      output_ = value;
     } else {
       // TRISx
       for (int i = 0; i < 8; ++i) {
         uint8_t mask = 1u << i;
         bool v = (value & mask) != 0;
         if (v != ((tris_ & mask) != 0)) {
+          pins_[i].update_output((output_ & mask) != 0);
           pins_[i].update_tris(v);
           listener_->pin_changed(&pins_[i], core::DeviceListener::RESISTANCE);
         }
