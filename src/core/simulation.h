@@ -44,8 +44,12 @@ namespace sim::core {
 
     template<typename CC = std::initializer_list<Clock*>, typename OC = std::initializer_list<SimulationObject*>>
     SimulationContext(CC clocks, OC objects)
-      : clocks_(std::begin(clocks), std::end(clocks)),
-        objects_(std::begin(objects), std::end(objects)) {}
+      : clocks_(std::begin(clocks), std::end(clocks)) {
+      objects_.reserve(objects.size());
+      for (auto *o : objects) {
+        add_object(o);
+      }
+    }
 
     /// Adds a clock to be part of the simulation, as a borrowed
     /// pointer.
