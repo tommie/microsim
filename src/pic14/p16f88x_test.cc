@@ -38,7 +38,9 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
     buf.top().visit<sim::core::ClockAdvancedTraceEntry,
                     sim::core::SchedulableTraceEntry,
                     sim::core::SimulationClockAdvancedTraceEntry,
-                    sim::core::SimulatorTraceEntry>([](const auto &e) {
+                    sim::core::SimulatorTraceEntry,
+                    sim::pic14::WatchDogClearedTraceEntry,
+                    sim::pic14::WatchDogTimedOutTraceEntry>([](const auto &e) {
       using T = std::decay_t<decltype(e)>;
       if constexpr (std::is_same_v<T, sim::core::ClockAdvancedTraceEntry>) {
         std::cout << "Clock       " << e.clock() << " now=" << e.now().time_since_epoch().count() << std::endl;
@@ -48,6 +50,10 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
         std::cout << "SimClock    now=" << e.now().time_since_epoch().count() << std::endl;
       } else if constexpr (std::is_same_v<T, sim::core::SimulatorTraceEntry>) {
         std::cout << "Simulator   " << e.simulator() << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogClearedTraceEntry>) {
+        std::cout << "WDT Clear" << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogTimedOutTraceEntry>) {
+        std::cout << "WDT Reset" << std::endl;
       } else {
         std::cout << "Other(" << e.kind() << ")" << std::endl;
       }
@@ -168,6 +174,12 @@ PROCESSOR_TEST(Timer0InterruptTest, P16F887, "testdata/t0if.hex") {
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
 
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
+}
+
+PROCESSOR_TEST(WatchdogTest, P16F887, "testdata/watchdog.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1");

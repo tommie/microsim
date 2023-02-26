@@ -134,17 +134,21 @@ namespace sim::pic14::internal {
     using RegisterAddressType = uint16_t;
     using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x81>>;
     using OscConReg = OscConRegBase<MultiRegisterBackend<Core, 0x8F>>;
+    using Config1Reg = Config1RegBase<SingleRegisterBackend<uint16_t>>;
 
     Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> fosc_changed);
 
     void reset();
 
     OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
+    const Config1Reg& config1() const { return config1_; }
 
+    sim::core::Clock* lfintosc() { return &lfintosc_; }
     sim::core::ClockModifier* fosc() { return &fosc_; }
     std::vector<sim::core::Clock*> clock_sources() { return { &hfintosc_, &lfintosc_ }; }
 
     bool in_reset() const { return reset_.value(); }
+    sim::core::Signal<bool>* wdt_reset_signal() { return wdt_reset_; }
     InputPin* mclr_pin() { return &mclr_pin_; }
 
     /// Enters ICSP mode, allowing programming the non-volatile
@@ -171,6 +175,7 @@ namespace sim::pic14::internal {
     InputPin mclr_pin_;
     sim::core::Signal<bool> *por_;
     sim::core::Signal<bool> *icsp_reset_;
+    sim::core::Signal<bool> *wdt_reset_;
 
     sim::core::Clock hfintosc_;
     sim::core::Clock lfintosc_;
@@ -178,7 +183,7 @@ namespace sim::pic14::internal {
 
     OptionRegBase<SingleRegisterBackend<uint8_t>> option_reg_;
     OscConRegBase<SingleRegisterBackend<uint8_t>> osccon_reg_;
-    Config1RegBase<SingleRegisterBackend<uint16_t>> config1_;
+    Config1Reg config1_;
   };
 
 }  // namespace sim::pic14::internal

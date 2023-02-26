@@ -31,6 +31,8 @@ namespace sim::pic14::internal {
     bool c() const { return Base::template bit<C>(); }
     void set_c(bool v) { Base::template set_bit<C>(v); }
 
+    void set_to(bool inv_v) { Base::template set_bit<TO>(!inv_v); }
+
     void set_reset(uint8_t inv_v) {
       Base::template set_masked<(1 << PD) | (1 << TO)>(~inv_v);
     }
@@ -66,7 +68,7 @@ namespace sim::pic14::internal {
 
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
-    Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
+    Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux);
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
@@ -116,6 +118,7 @@ namespace sim::pic14::internal {
     sim::core::ClockModifierView fosc_;
     NonVolatile *nv_;
     DataBus data_bus_;
+    std::function<void()> clear_wdt_;
     InterruptMux *interrupt_mux_;
 
     std::array<uint16_t, STACK_SIZE> stack;

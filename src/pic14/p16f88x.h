@@ -8,6 +8,7 @@
 #include "port.h"
 #include "register.h"
 #include "timer0.h"
+#include "watchdog.h"
 
 #include <array>
 #include <cstdint>
@@ -48,6 +49,7 @@ namespace sim::pic14 {
       internal::Core core_;
       internal::InterruptMux interrupt_mux_;
       internal::Executor executor_;
+      internal::WatchDogTimer wdt_;
       internal::Timer0 timer0_;
       std::array<internal::Port, NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;

@@ -57,7 +57,7 @@ namespace sim::pic14::internal {
   Core::Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> fosc_changed)
     : extosc_(extosc),
       nv_(nv),
-      reset_(std::move(reset), 3),
+      reset_(std::move(reset), 4),
       option_updated_(std::move(option_updated)),
       mclr_(reset_.make_signal()),
       mclr_pin_([this](bool value) {
@@ -65,6 +65,7 @@ namespace sim::pic14::internal {
       }),
       por_(reset_.make_signal(true)),
       icsp_reset_(reset_.make_signal()),
+      wdt_reset_(reset_.make_signal()),
       hfintosc_(sim::core::Nanoseconds(125)),    // 8 MHz
       lfintosc_(sim::core::Nanoseconds(32258)),  // 31 kHz
       fosc_(std::move(fosc_changed), &hfintosc_, 2),

@@ -23,11 +23,12 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
+  Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux)
     : listener_(listener),
       fosc_(fosc),
       nv_(nv),
       data_bus_(std::move(data_bus)),
+      clear_wdt_(std::move(clear_wdt)),
       interrupt_mux_(interrupt_mux),
       status_reg_(SingleRegisterBackend<uint8_t>((1u << StatusReg::PD) | (1u << StatusReg::TO))) {}
 
@@ -94,8 +95,8 @@ namespace sim::pic14::internal {
 
           case 0x0064:
             // clrwdt: to, pd
-            // TODO: clear WDT
             status_reg_.set_reset(0);
+            clear_wdt_();
             break;
 
           case 0x0009:

@@ -39,6 +39,7 @@ namespace sim::pic14::internal {
           reset();
         }
       }, [this]() {
+        wdt_.option_reg_updated();
         timer0_.option_reg_updated();
       }, [this]() {
         executor_.fosc_changed();
@@ -51,7 +52,13 @@ namespace sim::pic14::internal {
                 core_.fosc(),
                 &nv_,
                 build_data_bus(),
+                std::bind_front(&WatchDogTimer::clear, &wdt_),
                 &interrupt_mux_),
+      wdt_(core_.lfintosc(),
+           core_.wdt_reset_signal(),
+           core_.option_reg(),
+           &core_.config1(),
+           executor_.status_reg()),
       timer0_(core_.fosc(), interrupt_mux_.make_maskable_edge_signal_intcon(5, 2), core_.option_reg()),
       ports_{
         internal::Port(0, listener),
@@ -64,6 +71,7 @@ namespace sim::pic14::internal {
       pin_descrs_(build_pin_descrs()),
       scheduler_({
         &core_,
+        &wdt_,
         &executor_,
         &timer0_,
       }, this) {}
@@ -82,6 +90,7 @@ namespace sim::pic14::internal {
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
     backmap[0x81] = backs.size(); backs.push_back(&core_);
+    backmap[0x105] = backs.size(); backs.push_back(&wdt_);
 
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
@@ -115,6 +124,7 @@ namespace sim::pic14::internal {
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
   void P16F88X<ProgSize, EEDataSize, NumPorts>::reset() {
     core_.reset();
+    wdt_.reset();
     interrupt_mux_.reset();
     executor_.reset();
   }
