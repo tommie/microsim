@@ -97,7 +97,7 @@ namespace sim::pic14::internal {
     void update_masks() { write(((read() & ~Clear) | Set) ^ Toggle); }
 
     template<uint8_t Mask>
-    void set_masked(uint8_t v) { write((read() & ~Mask) | v); }
+    void set_masked(uint8_t v) { write((read() & ~Mask) | (v & Mask)); }
 
   protected:
     Backend backend_;
