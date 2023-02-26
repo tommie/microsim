@@ -9,6 +9,8 @@ namespace sim::core {
   }
 
   Advancement Scheduler::advance_to(const AdvancementLimit &limit) {
+    TimePoint at_time = SimulationClock::NEVER;
+
     for (;;) {
       if (!queue_.empty()) {
         AdvancementLimit sublimit = {
@@ -50,8 +52,13 @@ namespace sim::core {
           continue;
         }
 
+        if (is_never(prev_time) && !is_never(at_time) && at_time == top.first) {
+          std::abort();  // The scheduler is not making progress.
+        }
+
         enqueue(top.second);
         prev_time = top.first;
+        at_time = top.first;
 
         if (limit.advanced) limit.advanced(top.first);
       }

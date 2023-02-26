@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libcore.la
 
 libcore_la_SOURCES = \
+	clock.cc \
 	device.cc \
 	ihex.cc \
 	scheduler.cc \

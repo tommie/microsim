@@ -20,7 +20,7 @@ namespace sim::core {
     static constexpr bool is_steady() { return true; }
 
     /// Constructs a new clock with a known interval.
-    explicit Clock(Duration interval) : interval_(interval) {}
+    explicit Clock(Duration interval);
 
     /// Returns the configured interval of this clock.
     Duration interval() const { return interval_; }
@@ -32,14 +32,7 @@ namespace sim::core {
     /// Advances the clock. This should be called as simulation
     /// progresses so that `at(0)` always represents the next clock
     /// tick, rather than some time in the past.
-    void advance_to(TimePoint end_time) {
-      Duration d = end_time - sim_now_;
-
-      if (d < Duration()) return;
-
-      now_ += duration(d / interval_);
-      sim_now_ = TimePoint(Duration(now_.time_since_epoch().count() * interval_));
-    }
+    void advance_to(TimePoint end_time);
 
   private:
     const Duration interval_;
@@ -58,12 +51,7 @@ namespace sim::core {
 
     /// Advances the clocks of the scheduler so that `at(0)` returns
     /// some time at or after `end_time`.
-    void advance_to(TimePoint end_time) {
-      sim_clock_->advance_to(end_time);
-      for (auto *clock : clocks_) {
-        clock->advance_to(end_time);
-      }
-    }
+    void advance_to(TimePoint end_time);
 
   private:
     SimulationClock *sim_clock_;
