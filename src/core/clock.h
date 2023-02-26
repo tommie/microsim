@@ -1,6 +1,7 @@
 #ifndef sim_core_clock_h
 #define sim_core_clock_h
 
+#include <functional>
 #include <vector>
 
 #include "simtime.h"
@@ -63,10 +64,13 @@ namespace sim::core {
   /// clock's `now` would have a current time in the past. An executor
   /// that is executing an instruction, but needs to skip a clock
   /// cycle will have a current time in the future.
-  class ClockView {
+  template<typename Clock>
+  class ClockViewBase {
   public:
-    explicit ClockView(Clock *clock)
+    explicit ClockViewBase(Clock *clock)
       : clock_(clock), at_(clock->now()) {}
+
+    const Clock& clock() const { return *clock_; }
 
     Duration interval() const { return clock_->interval(); }
 
@@ -76,7 +80,7 @@ namespace sim::core {
 
     /// Resets the view's current time to `now - rem`. Invariant:
     /// `reset(delta)` is a no-op.
-    void reset(Clock::duration rem = Clock::duration()) { at_ = clock_->now() - rem; }
+    void reset(Clock::duration rem = {}) { at_ = clock_->now() - rem; }
 
     /// Returns the current delta to the clock's now. If positive, the
     /// view's current time is in the past.
@@ -86,6 +90,41 @@ namespace sim::core {
     Clock *clock_;
     Clock::time_point at_;
   };
+
+  using ClockView = ClockViewBase<Clock>;
+
+  /// A modifier that can switch between clocks and add dynamic
+  /// prescaling.
+  class ClockModifier {
+  public:
+    using duration = Clock::duration;
+    using rep = Clock::rep;
+    using time_point = Clock::time_point;
+
+    /// Constructs a new modifier. The `changed` function is invoked
+    /// when the clock base has changed in a way that could affect the
+    /// "next tick" of callers.
+    ClockModifier(std::function<void()> changed, Clock *selected, int prescaler = 1);
+
+    const Clock& selected() const { return selected_.clock(); }
+
+    Duration interval() const { return selected_.interval() * prescaler_; }
+    time_point now() const { return at_ + selected_.delta() / prescaler_; }
+    TimePoint at(duration d) const { return selected_.clock().at(d * prescaler_) + adj_; }
+
+    /// Selects a new clock and prescaler value. The prescaler must be
+    /// greater than zero.
+    void select(Clock *selected, int prescaler = 1);
+
+  private:
+    std::function<void()> changed_;
+    ClockView selected_;
+    int prescaler_;
+    Clock::time_point at_ = {};
+    Duration adj_ = {};
+  };
+
+  using ClockModifierView = ClockViewBase<ClockModifier>;
 
 }  // namespace sim::core
 
