@@ -37,7 +37,9 @@ namespace sim::pic14::internal {
         if (!raised) {
           reset();
         }
-      }, [this]() {}),
+      }, [this]() {}, [this]() {
+        executor_.fosc_changed();
+      }),
       interrupt_mux_([this]() {
         executor_.interrupted();
       }),

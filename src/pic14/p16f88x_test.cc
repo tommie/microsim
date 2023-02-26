@@ -36,7 +36,7 @@ class ProcessorTestCase : public sim::testing::TestCase {
 public:
   ProcessorTestCase(std::string_view firmware)
     : firmware_(firmware), fosc_(std::chrono::seconds(1)), proc(&listener_, &fosc_),
-      sim_({&fosc_}, {&proc}) {
+      sim_(sim::core::SimulationContext({&fosc_}, {&proc}).make_simulator()) {
     for (const auto &descr : proc.pins()) {
       listener_.pin_descrs[descr.pin] = descr;
       pins[descr.name] = descr.pin;

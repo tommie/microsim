@@ -66,7 +66,7 @@ namespace sim::pic14::internal {
 
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
-    Executor(sim::core::DeviceListener *listener, sim::core::Clock *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
+    Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux);
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
@@ -83,6 +83,9 @@ namespace sim::pic14::internal {
     DataBus& data_bus() { return data_bus_; }
 
     StatusReg status_reg() { return StatusReg(MultiRegisterBackend<Executor, 0x03>(this)); }
+
+    /// Informs the executor that fosc has changed somehow.
+    void fosc_changed() { schedule_immediately(); }
 
     /// Informs the executor of an active interrupt condition.
     void interrupted();
@@ -110,7 +113,7 @@ namespace sim::pic14::internal {
 
   private:
     sim::core::DeviceListener *listener_;
-    sim::core::ClockView fosc_;
+    sim::core::ClockModifierView fosc_;
     NonVolatile *nv_;
     DataBus data_bus_;
     InterruptMux *interrupt_mux_;

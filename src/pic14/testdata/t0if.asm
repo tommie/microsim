@@ -4,13 +4,24 @@
     __config _CONFIG2, _BOR40V & _WRT_OFF
 
     movlw   ~0x01
+    movwf   PORTA
     banksel TRISA
     movwf   TRISA
 
-    banksel PORTB
-    movf    PORTB, W
+    banksel OPTION_REG
+    bcf     OPTION_REG, T0CS
+    banksel TMR0
+    clrf    TMR0
+    bcf     INTCON, T0IF
+    bsf     INTCON, T0IE
+
+    sleep
+
+    bcf     INTCON, T0IF
     banksel PORTA
+    movlw   1
     movwf   PORTA
+
     sleep
 
     end

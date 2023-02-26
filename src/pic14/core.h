@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 #include "../core/clock.h"
 #include "../core/scheduler.h"
@@ -75,22 +76,73 @@ namespace sim::pic14::internal {
     void reset() { Base::write(0xFF); }
   };
 
+  template<typename Backend>
+  class OscConRegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
+    static constexpr uint8_t WRITE_MASK = 0x71;
+
+  public:
+    enum Bits {
+      SCS, LTS, HTS, OSTS, IRCF0, IRCF1, IRCF2,
+    };
+
+    explicit OscConRegBase(Backend backend) : BitRegister<Backend>(backend) {}
+
+    void write_masked(uint8_t v) { Base::template set_masked<WRITE_MASK>(v); }
+
+    bool scs() const { return Base::template bit<SCS>(); }
+    bool lts() const { return Base::template bit<LTS>(); }
+    bool hts() const { return Base::template bit<HTS>(); }
+    bool osts() const { return Base::template bit<OSTS>(); }
+    uint8_t ircf() const { return Base::template bit_field<IRCF0, 3>(); }
+
+    void reset() { Base::write(0x68 | 0x06); }
+  };
+
+  template<typename Backend>
+  class Config1RegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
+  public:
+    static constexpr uint16_t ADDR = 7;
+
+    enum Bits {
+      FOSC0, FOSC1, FOSC2, WDTE, PWRTE, MCLRE, CP, CPD,
+      BOREN0, BOREN1, IESO, FCMEN, LVP, DEBUG,
+    };
+
+    explicit Config1RegBase(Backend backend) : BitRegister<Backend>(backend) {}
+
+    uint8_t fosc() const { return Base::template bit_field<FOSC0, 3>(); }
+    bool wdte() const { return Base::template bit<WDTE>(); }
+    bool pwrte() const { return !Base::template bit<PWRTE>(); }
+    bool mclre() const { return Base::template bit<MCLRE>(); }
+    bool cp() const { return !Base::template bit<CP>(); }
+    bool cpd() const { return !Base::template bit<CPD>(); }
+    uint8_t boren() const { return Base::template bit_field<BOREN0, 2>(); }
+    bool ieso() const { return Base::template bit<IESO>(); }
+    bool fcmen() const { return Base::template bit<FCMEN>(); }
+    bool lvp() const { return Base::template bit<LVP>(); }
+    bool debug() const { return !Base::template bit<DEBUG>(); }
+  };
+
   /// Core parts that are shared by multiple other modules.
   class Core : public RegisterBackend, public sim::core::Schedulable {
   public:
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
     using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x81>>;
+    using OscConReg = OscConRegBase<MultiRegisterBackend<Core, 0x8F>>;
 
-    Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated);
+    Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> fosc_changed);
 
-    void reset() {
-      option_reg_.reset();
-    }
+    void reset();
 
     OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
 
-    sim::core::Clock* fosc() { return extosc_; }
+    sim::core::ClockModifier* fosc() { return &fosc_; }
+    std::vector<sim::core::Clock*> clock_sources() { return { &hfintosc_, &lfintosc_ }; }
 
     bool in_reset() const { return reset_.value(); }
     InputPin* mclr_pin() { return &mclr_pin_; }
@@ -106,16 +158,27 @@ namespace sim::pic14::internal {
     sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
   private:
+    void update_system_clock();
+    std::pair<sim::core::Clock*, int> system_clock();
+
+  private:
     sim::core::Clock *extosc_;
     NonVolatile *nv_;
     sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
+    std::function<void()> option_updated_;
+
     sim::core::Signal<bool> *mclr_;
     InputPin mclr_pin_;
     sim::core::Signal<bool> *por_;
     sim::core::Signal<bool> *icsp_reset_;
 
-    std::function<void()> option_updated_;
+    sim::core::Clock hfintosc_;
+    sim::core::Clock lfintosc_;
+    sim::core::ClockModifier fosc_;
+
     OptionRegBase<SingleRegisterBackend<uint8_t>> option_reg_;
+    OscConRegBase<SingleRegisterBackend<uint8_t>> osccon_reg_;
+    Config1RegBase<SingleRegisterBackend<uint16_t>> config1_;
   };
 
 }  // namespace sim::pic14::internal

@@ -28,6 +28,8 @@ namespace sim::pic14 {
     public:
       explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc);
 
+      std::vector<sim::core::Clock*> clock_sources() override { return core_.clock_sources(); }
+
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
       ICSP enter_icsp() { return core_.enter_icsp(); }

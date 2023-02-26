@@ -23,7 +23,7 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
-  Executor::Executor(sim::core::DeviceListener *listener, sim::core::Clock *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
+  Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, InterruptMux *interrupt_mux)
     : listener_(listener),
       fosc_(fosc),
       nv_(nv),
