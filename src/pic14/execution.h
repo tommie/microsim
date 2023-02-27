@@ -66,6 +66,25 @@ namespace sim::pic14::internal {
     using RegisterAddressType = uint16_t;
     using StatusReg = StatusRegBase<MultiRegisterBackend<Executor, 0x03>>;
 
+    class Inhibitor {
+      friend class Executor;
+
+    public:
+      Inhibitor(Inhibitor&&);
+      Inhibitor& operator =(Inhibitor&&);
+      ~Inhibitor();
+
+      Inhibitor() = delete;
+      Inhibitor(const Inhibitor&) = delete;
+      Inhibitor& operator =(const Inhibitor&) = delete;
+
+    private:
+      Inhibitor(Executor *exec);
+
+    private:
+      Executor *exec_;
+    };
+
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
     Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux);
@@ -85,6 +104,11 @@ namespace sim::pic14::internal {
     DataBus& data_bus() { return data_bus_; }
 
     StatusReg status_reg() { return StatusReg(MultiRegisterBackend<Executor, 0x03>(this)); }
+
+    /// Inhibits execution until the inhibitor is destroyed. `skip` is
+    /// used to move the PC forward this many instructions before
+    /// resuming execution.
+    Inhibitor inhibit(uint16_t skip);
 
     /// Informs the executor that fosc has changed somehow.
     void fosc_changed() { schedule_immediately(); }
@@ -127,6 +151,7 @@ namespace sim::pic14::internal {
     StatusRegImpl status_reg_;
 
     bool in_sleep;
+    unsigned int inhibit_ = 0;
   };
 
 }  // namespace sim::pic14::internal

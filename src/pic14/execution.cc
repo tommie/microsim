@@ -23,6 +23,31 @@ namespace sim::pic14::internal {
     set_bit<Z>(v == 0);
   }
 
+  inline Executor::Inhibitor::Inhibitor(Executor *exec)
+    : exec_(exec) {
+    ++exec->inhibit_;
+  }
+
+  Executor::Inhibitor::Inhibitor(Executor::Inhibitor &&src)
+    : exec_(nullptr) {
+    std::swap(exec_, src.exec_);
+  }
+
+  Executor::Inhibitor& Executor::Inhibitor::operator =(Executor::Inhibitor &&src) {
+    Inhibitor::~Inhibitor();
+
+    exec_ = nullptr;
+    std::swap(exec_, src.exec_);
+    return *this;
+  }
+
+  Executor::Inhibitor::~Inhibitor() {
+    if (exec_ != nullptr && --exec_->inhibit_ == 0) {
+      exec_->fosc_.reset();
+      exec_->schedule_immediately();
+    }
+  }
+
   Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux)
     : listener_(listener),
       fosc_(fosc),
@@ -40,6 +65,7 @@ namespace sim::pic14::internal {
     w_reg_ = 0;
     fosc_.reset();
     in_sleep = false;
+    // Inhibits are cleared by the owning modules.
 
     schedule_immediately();
   }
@@ -67,11 +93,17 @@ namespace sim::pic14::internal {
       fosc_.reset(delta - execute() * TICKS_PER_INSN);
     }
 
-    return { .next_time = in_sleep ? sim::core::SimulationClock::NEVER : fosc_.at(TICKS_PER_INSN) };
+    return {
+      .next_time = in_sleep || inhibit_ > 0 ? sim::core::SimulationClock::NEVER : fosc_.at(TICKS_PER_INSN),
+    };
   }
 
   int Executor::execute() {
     if (in_sleep) {
+      return 0;
+    }
+
+    if (inhibit_ > 0) {
       return 0;
     }
 
@@ -379,6 +411,12 @@ namespace sim::pic14::internal {
     }
 
     return get_pc() != pc + 1 ? 2 : 1;
+  }
+
+  Executor::Inhibitor Executor::inhibit(uint16_t skip) {
+    set_pc(get_pc() + skip);
+    fosc_.reset(skip * TICKS_PER_INSN);
+    return Inhibitor(this);
   }
 
   void Executor::interrupted() {
