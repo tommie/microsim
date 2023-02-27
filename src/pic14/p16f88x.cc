@@ -1,5 +1,7 @@
 #include "p16f88x.h"
 
+#include <sstream>
+
 namespace sim::pic14::internal {
 
   std::u16string build_addrmap(uint16_t size) {
@@ -46,6 +48,7 @@ namespace sim::pic14::internal {
       }, [this]() {
         executor_.fosc_changed();
         timer0_.fosc_changed();
+        adc_.fosc_changed();
       }),
       interrupt_mux_([this]() {
         executor_.interrupted();
@@ -71,6 +74,7 @@ namespace sim::pic14::internal {
       },
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0)),
       extint_(core_.option_reg(), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1)),
+      adc_(core_.fosc(), interrupt_mux_.make_maskable_edge_signal_peripheral(6)),
       ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
       eprom_(&nv_, core_.lfintosc(), &core_.config2(), interrupt_mux_.make_maskable_edge_signal_peripheral(12), &executor_),
       pin_descrs_(build_pin_descrs()),
@@ -79,6 +83,7 @@ namespace sim::pic14::internal {
         &wdt_,
         &executor_,
         &timer0_,
+        &adc_,
         &eprom_,
       }, this) {}
 
@@ -95,6 +100,7 @@ namespace sim::pic14::internal {
     backmap[0x05 + 2] = backmap[0x85 + 2] = backs.size(); backs.push_back(&ports_[1]);
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
+    backmap[0x1E] = backmap[0x1F] = backmap[0x9E] = backmap[0x9F] = backs.size(); backs.push_back(&adc_);
     backmap[0x81] = backmap[0x8E] = backmap[0x8F] = backs.size(); backs.push_back(&core_);
     backmap[0x105] = backs.size(); backs.push_back(&wdt_);
     backmap[0x10C] = backmap[0x10D] = backmap[0x10E] = backmap[0x10F] = backmap[0x18C] = backmap[0x18D] = backs.size(); backs.push_back(&eprom_);
@@ -127,6 +133,15 @@ namespace sim::pic14::internal {
       ++name_buf[2];
     }
 
+    descrs.push_back({.pin = &adc_.avdd_pin(), .name = "AVDD"});
+    int i = 0;
+    for (auto &pin : adc_.input_pins()) {
+      std::ostringstream ss;
+      ss << "AN" << i;
+      ++i;
+      descrs.push_back({.pin = &pin, .name = ss.str()});
+    }
+
     return descrs;
   }
 
@@ -136,7 +151,18 @@ namespace sim::pic14::internal {
     wdt_.reset();
     interrupt_mux_.reset();
     executor_.reset();
+    adc_.reset();
     eprom_.reset();
+  }
+
+  template<typename Config>
+  std::vector<sim::core::Clock*> P16F88X<Config>::clock_sources() {
+    std::vector<sim::core::Clock*> sources = core_.clock_sources();
+    auto adc_sources = adc_.clock_sources();
+
+    sources.insert(sources.end(), adc_sources.begin(), adc_sources.end());
+
+    return sources;
   }
 
   template<typename Config>

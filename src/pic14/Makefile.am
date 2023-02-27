@@ -3,6 +3,7 @@ SUBDIRS = testdata
 lib_LTLIBRARIES = libpic14.la
 
 libpic14_la_SOURCES = \
+	adc.cc \
 	core.cc \
 	data_bus.cc \
 	eprom.cc \
@@ -17,6 +18,7 @@ libpic14_la_SOURCES = \
 	watchdog.cc
 
 include_HEADERS = \
+	adc.h \
 	core.h \
 	data_bus.h \
 	eprom.h \

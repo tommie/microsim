@@ -3,6 +3,7 @@
 
 #include "../core/device.h"
 #include "../core/scheduler.h"
+#include "adc.h"
 #include "core.h"
 #include "eprom.h"
 #include "execution.h"
@@ -46,8 +47,7 @@ namespace sim::pic14 {
     public:
       explicit P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc);
 
-      std::vector<sim::core::Clock*> clock_sources() override { return core_.clock_sources(); }
-
+      std::vector<sim::core::Clock*> clock_sources() override;
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
       ICSP enter_icsp() { return core_.enter_icsp(); }
@@ -70,6 +70,7 @@ namespace sim::pic14 {
       std::array<internal::Port, Config::NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;
       internal::ExternalInterrupt extint_;
+      internal::ADConverter adc_;
       internal::UltraLowPowerWakeUp ulpwu_;
       internal::EPROM<Config::PgmDatBufSize, self_write_cutoffs<Config::ProgSize>()> eprom_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;

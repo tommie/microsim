@@ -39,6 +39,7 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
                     sim::core::SchedulableTraceEntry,
                     sim::core::SimulationClockAdvancedTraceEntry,
                     sim::core::SimulatorTraceEntry,
+                    sim::pic14::ADConversionDoneTraceEntry,
                     sim::pic14::WatchDogClearedTraceEntry,
                     sim::pic14::WatchDogTimedOutTraceEntry,
                     sim::pic14::WroteEEDATATraceEntry,
@@ -52,6 +53,8 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
         std::cout << "SimClock    now=" << e.now().time_since_epoch().count() << std::endl;
       } else if constexpr (std::is_same_v<T, sim::core::SimulatorTraceEntry>) {
         std::cout << "Simulator   " << e.simulator() << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::ADConversionDoneTraceEntry>) {
+        std::cout << "ADC Done" << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogClearedTraceEntry>) {
         std::cout << "WDT Clear" << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogTimedOutTraceEntry>) {
@@ -226,6 +229,18 @@ PROCESSOR_TEST(ProgramFlashTest, P16F887, "testdata/eeprog.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after read");
+}
+
+PROCESSOR_TEST(ADConverterTest, P16F887, "testdata/adc.hex") {
+  pins["AN1"]->set_external(0.5);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after ADC");
 }
 
 int main() {
