@@ -8,8 +8,7 @@
     org     4
 irq:
     bcf     INTCON, INTF
-    banksel PORTB
-    movf    PORTB, W
+    movlw   0x01
     banksel PORTA
     movwf   PORTA
     retfie

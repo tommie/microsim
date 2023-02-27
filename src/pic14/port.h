@@ -102,9 +102,7 @@ namespace sim::pic14::internal {
   public:
     InterruptiblePort(uint8_t index,
                       sim::core::DeviceListener *listener,
-                      InterruptMux::MaskableIntconEdgeSignal &&change,
-                      InterruptMux::MaskableIntconEdgeSignal &&interrupt,
-                      Core::OptionReg &&option_reg);
+                      InterruptMux::MaskableIntconEdgeSignal &&change);
 
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;
@@ -114,8 +112,6 @@ namespace sim::pic14::internal {
 
   private:
     InterruptMux::MaskableIntconEdgeSignal change_;
-    InterruptMux::MaskableIntconEdgeSignal interrupt_;
-    Core::OptionReg option_reg_;
     uint8_t ioc_ = 0;
     uint8_t wpu_ = 0xFF;
   };

@@ -144,7 +144,7 @@ PROCESSOR_TEST(ExtInterruptTest, P16F887, "testdata/extint.hex") {
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0 before pin change");
 
-  pins["RB0"]->set_external(1);
+  pins["INT"]->set_external(1);
 
   advance_until_sleep();
 
@@ -171,7 +171,7 @@ PROCESSOR_TEST(GlobalInterruptTest, P16F887, "testdata/gie.hex") {
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0 before pin change");
 
-  pins["RB0"]->set_external(1);
+  pins["INT"]->set_external(1);
 
   advance_until_sleep();
 

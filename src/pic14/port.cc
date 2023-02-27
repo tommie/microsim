@@ -67,9 +67,7 @@ namespace sim::pic14::internal {
 
   InterruptiblePort::InterruptiblePort(uint8_t index,
                                        sim::core::DeviceListener *listener,
-                                       InterruptMux::MaskableIntconEdgeSignal &&change,
-                                       InterruptMux::MaskableIntconEdgeSignal &&interrupt,
-                                       Core::OptionReg &&option_reg)
+                                       InterruptMux::MaskableIntconEdgeSignal &&change)
     : PortBase(index, listener, std::array<InterruptiblePortPin, 8>{
         InterruptiblePortPin(std::bind_front(&InterruptiblePort::pin_changed, this, 0)),
         InterruptiblePortPin(std::bind_front(&InterruptiblePort::pin_changed, this, 1)),
@@ -80,9 +78,7 @@ namespace sim::pic14::internal {
         InterruptiblePortPin(std::bind_front(&InterruptiblePort::pin_changed, this, 6)),
         InterruptiblePortPin(std::bind_front(&InterruptiblePort::pin_changed, this, 7)),
       }),
-      change_(std::move(change)),
-      interrupt_(std::move(interrupt)),
-      option_reg_(std::move(option_reg)) {}
+      change_(std::move(change)) {}
 
   uint8_t InterruptiblePort::read_register(uint16_t addr) {
     if (addr == 0x95) {
@@ -121,10 +117,6 @@ namespace sim::pic14::internal {
 
     if (ioc_ & (1u << index)) {
       change_.raise();
-    }
-
-    if (index == 0 && option_reg_.intedg() == rising) {
-      interrupt_.raise();
     }
   }
 

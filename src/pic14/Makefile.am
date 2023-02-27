@@ -7,6 +7,7 @@ libpic14_la_SOURCES = \
 	data_bus.cc \
 	errors.cc \
 	execution.cc \
+	extint.cc \
 	interrupt.cc \
 	p16f88x.cc \
 	port.cc \
@@ -19,6 +20,7 @@ include_HEADERS = \
 	data_bus.h \
 	errors.h \
 	execution.h \
+	extint.h \
 	interrupt.h \
 	nonvolatile.h \
 	p16f88x.h \

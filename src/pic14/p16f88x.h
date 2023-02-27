@@ -5,6 +5,7 @@
 #include "../core/scheduler.h"
 #include "core.h"
 #include "execution.h"
+#include "extint.h"
 #include "port.h"
 #include "register.h"
 #include "timer0.h"
@@ -54,6 +55,7 @@ namespace sim::pic14 {
       internal::Timer0 timer0_;
       std::array<internal::Port, NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;
+      internal::ExternalInterrupt extint_;
       internal::UltraLowPowerWakeUp ulpwu_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;

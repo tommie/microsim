@@ -69,7 +69,8 @@ namespace sim::pic14::internal {
         internal::Port(3, listener),
         internal::Port(4, listener),
       },
-      portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), core_.option_reg()),
+      portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0)),
+      extint_(core_.option_reg(), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1)),
       ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
@@ -105,6 +106,7 @@ namespace sim::pic14::internal {
     std::vector<sim::core::PinDescriptor> descrs;
 
     descrs.push_back({.pin = core_.mclr_pin(), .name = "MCLR"});
+    descrs.push_back({.pin = extint_.pin(), .name = "INT"});
     descrs.push_back({.pin = ulpwu_.pin(), .name = "ULPWU"});
 
     std::string name_buf("RA0");
