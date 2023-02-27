@@ -95,16 +95,9 @@ namespace sim::pic14::internal {
     backmap[0x05 + 2] = backmap[0x85 + 2] = backs.size(); backs.push_back(&ports_[1]);
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
-    backmap[0x81] = backs.size(); backs.push_back(&core_);
-    backmap[0x8E] = backs.size(); backs.push_back(&core_);
-    backmap[0x8F] = backs.size(); backs.push_back(&core_);
+    backmap[0x81] = backmap[0x8E] = backmap[0x8F] = backs.size(); backs.push_back(&core_);
     backmap[0x105] = backs.size(); backs.push_back(&wdt_);
-    backmap[0x10C] = backs.size(); backs.push_back(&eprom_);
-    backmap[0x10D] = backs.size(); backs.push_back(&eprom_);
-    backmap[0x10E] = backs.size(); backs.push_back(&eprom_);
-    backmap[0x10F] = backs.size(); backs.push_back(&eprom_);
-    backmap[0x18C] = backs.size(); backs.push_back(&eprom_);
-    backmap[0x18D] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x10C] = backmap[0x10D] = backmap[0x10E] = backmap[0x10F] = backmap[0x18C] = backmap[0x18D] = backs.size(); backs.push_back(&eprom_);
 
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
