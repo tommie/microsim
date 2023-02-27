@@ -24,14 +24,14 @@ namespace sim::pic14::internal {
     return addrmap;
   }
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  const std::u16string_view P16F88X<ProgSize, EEDataSize, NumPorts>::address_map() {
+  template<typename Config>
+  const std::u16string_view P16F88X<Config>::address_map() {
     static const std::u16string addrmap = build_addrmap(P16F88X::FILE_BUS_SIZE);
     return addrmap;
   }
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc)
+  template<typename Config>
+  P16F88X<Config>::P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc)
     : Device(listener),
       nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}),
       core_(extosc, &nv_, [this](bool raised) {
@@ -80,8 +80,8 @@ namespace sim::pic14::internal {
         &timer0_,
       }, this) {}
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  internal::DataBus P16F88X<ProgSize, EEDataSize, NumPorts>::build_data_bus() {
+  template<typename Config>
+  internal::DataBus P16F88X<Config>::build_data_bus() {
     std::vector<internal::RegisterBackend*> backs;
     std::u8string backmap(FILE_BUS_SIZE, 0xFF);
 
@@ -101,8 +101,8 @@ namespace sim::pic14::internal {
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  std::vector<sim::core::PinDescriptor> P16F88X<ProgSize, EEDataSize, NumPorts>::build_pin_descrs() {
+  template<typename Config>
+  std::vector<sim::core::PinDescriptor> P16F88X<Config>::build_pin_descrs() {
     std::vector<sim::core::PinDescriptor> descrs;
 
     descrs.push_back({.pin = core_.mclr_pin(), .name = "MCLR"});
@@ -129,16 +129,16 @@ namespace sim::pic14::internal {
     return descrs;
   }
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  void P16F88X<ProgSize, EEDataSize, NumPorts>::reset() {
+  template<typename Config>
+  void P16F88X<Config>::reset() {
     core_.reset();
     wdt_.reset();
     interrupt_mux_.reset();
     executor_.reset();
   }
 
-  template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  sim::core::Advancement P16F88X<ProgSize, EEDataSize, NumPorts>::advance_to(const sim::core::AdvancementLimit &limit) {
+  template<typename Config>
+  sim::core::Advancement P16F88X<Config>::advance_to(const sim::core::AdvancementLimit &limit) {
     if (core_.in_reset()) {
       return core_.advance_to(limit);
     }
@@ -147,7 +147,7 @@ namespace sim::pic14::internal {
   }
 
   // Template instantiations for specific processors.
-  template class P16F88X<4096, 256, 5>;
-  template class P16F88X<8192, 256, 5>;
+  template class P16F88X<P16F88XConfig<4096, 256, 5>>;
+  template class P16F88X<P16F88XConfig<8192, 256, 5>>;
 
 } // namespace sim::pic14::internal

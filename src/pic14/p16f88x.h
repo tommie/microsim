@@ -23,10 +23,17 @@ namespace sim::pic14 {
   namespace internal {
 
     template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+    struct P16F88XConfig {
+      static constexpr uint16_t ProgSize = ProgSize_;
+      static constexpr uint16_t EEDataSize = EEDataSize_;
+      static constexpr int NumPorts = NumPorts_;
+    };
+
+    template<typename Config>
     class P16F88X : public sim::core::Device {
       static const uint16_t FILE_BUS_SIZE = 0x200;
-      static const uint16_t PROG_SIZE = ProgSize;
-      static const uint16_t EEDATA_SIZE = EEDataSize;
+      static const uint16_t PROG_SIZE = Config::ProgSize;
+      static const uint16_t EEDATA_SIZE = Config::EEDataSize;
       static const uint16_t CONFIG_SIZE = 9;
 
     public:
@@ -53,7 +60,7 @@ namespace sim::pic14 {
       internal::Executor executor_;
       internal::WatchDogTimer wdt_;
       internal::Timer0 timer0_;
-      std::array<internal::Port, NumPorts - 1> ports_;
+      std::array<internal::Port, Config::NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;
       internal::ExternalInterrupt extint_;
       internal::UltraLowPowerWakeUp ulpwu_;
@@ -65,8 +72,8 @@ namespace sim::pic14 {
 
   }  // namespace internal
 
-  using P16F884 = internal::P16F88X<4096, 256, 5>;
-  using P16F887 = internal::P16F88X<8192, 256, 5>;
+  using P16F884 = internal::P16F88X<internal::P16F88XConfig<4096, 256, 5, 4>>;
+  using P16F887 = internal::P16F88X<internal::P16F88XConfig<8192, 256, 5, 8>>;
 
 }  // namespace sim::pic14
 
