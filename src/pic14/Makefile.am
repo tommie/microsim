@@ -5,6 +5,7 @@ lib_LTLIBRARIES = libpic14.la
 libpic14_la_SOURCES = \
 	core.cc \
 	data_bus.cc \
+	eprom.cc \
 	errors.cc \
 	execution.cc \
 	extint.cc \
@@ -18,6 +19,7 @@ libpic14_la_SOURCES = \
 include_HEADERS = \
 	core.h \
 	data_bus.h \
+	eprom.h \
 	errors.h \
 	execution.h \
 	extint.h \

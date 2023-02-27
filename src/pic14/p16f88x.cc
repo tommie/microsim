@@ -72,12 +72,14 @@ namespace sim::pic14::internal {
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0)),
       extint_(core_.option_reg(), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1)),
       ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
+      eprom_(&nv_, core_.lfintosc(), &core_.config2(), interrupt_mux_.make_maskable_edge_signal_peripheral(12), &executor_),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
         &core_,
         &wdt_,
         &executor_,
         &timer0_,
+        &eprom_,
       }, this) {}
 
   template<typename Config>
@@ -97,6 +99,12 @@ namespace sim::pic14::internal {
     backmap[0x8E] = backs.size(); backs.push_back(&core_);
     backmap[0x8F] = backs.size(); backs.push_back(&core_);
     backmap[0x105] = backs.size(); backs.push_back(&wdt_);
+    backmap[0x10C] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x10D] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x10E] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x10F] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x18C] = backs.size(); backs.push_back(&eprom_);
+    backmap[0x18D] = backs.size(); backs.push_back(&eprom_);
 
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
   }
@@ -135,6 +143,7 @@ namespace sim::pic14::internal {
     wdt_.reset();
     interrupt_mux_.reset();
     executor_.reset();
+    eprom_.reset();
   }
 
   template<typename Config>

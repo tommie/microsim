@@ -4,6 +4,7 @@
 #include "../core/device.h"
 #include "../core/scheduler.h"
 #include "core.h"
+#include "eprom.h"
 #include "execution.h"
 #include "extint.h"
 #include "port.h"
@@ -22,11 +23,17 @@ namespace sim::pic14 {
 
   namespace internal {
 
-    template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
+    constexpr int pgmdat_buf_size(uint16_t prog_size) {
+      if (prog_size < 8192) return 4;
+      else return 8;
+    }
+
+    template<uint16_t ProgSize_, uint16_t EEDataSize_, int NumPorts_, int PgmDatBufSize_ = pgmdat_buf_size(ProgSize_)>
     struct P16F88XConfig {
       static constexpr uint16_t ProgSize = ProgSize_;
       static constexpr uint16_t EEDataSize = EEDataSize_;
       static constexpr int NumPorts = NumPorts_;
+      static constexpr int PgmDatBufSize = PgmDatBufSize_;
     };
 
     template<typename Config>
@@ -64,6 +71,7 @@ namespace sim::pic14 {
       internal::InterruptiblePort portb_;
       internal::ExternalInterrupt extint_;
       internal::UltraLowPowerWakeUp ulpwu_;
+      internal::EPROM<Config::PgmDatBufSize, self_write_cutoffs<Config::ProgSize>()> eprom_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;
 

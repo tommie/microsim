@@ -40,7 +40,9 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
                     sim::core::SimulationClockAdvancedTraceEntry,
                     sim::core::SimulatorTraceEntry,
                     sim::pic14::WatchDogClearedTraceEntry,
-                    sim::pic14::WatchDogTimedOutTraceEntry>([](const auto &e) {
+                    sim::pic14::WatchDogTimedOutTraceEntry,
+                    sim::pic14::WroteEEDATATraceEntry,
+                    sim::pic14::WroteProgramFlashTraceEntry>([](const auto &e) {
       using T = std::decay_t<decltype(e)>;
       if constexpr (std::is_same_v<T, sim::core::ClockAdvancedTraceEntry>) {
         std::cout << "Clock       " << e.clock() << " now=" << e.now().time_since_epoch().count() << std::endl;
@@ -54,6 +56,10 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
         std::cout << "WDT Clear" << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogTimedOutTraceEntry>) {
         std::cout << "WDT Reset" << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::WroteEEDATATraceEntry>) {
+        std::cout << "WR EEDATA   0x" << std::hex << (unsigned long) e.addr() << std::dec << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::WroteProgramFlashTraceEntry>) {
+        std::cout << "WR Program  0x" << std::hex << (unsigned long) e.addr() << std::dec << std::endl;
       } else {
         std::cout << "Other(" << e.kind() << ")" << std::endl;
       }
@@ -198,6 +204,28 @@ PROCESSOR_TEST(WatchdogTest, P16F887, "testdata/watchdog.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
+}
+
+PROCESSOR_TEST(EEDATATest, P16F887, "testdata/eedata.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after read");
+}
+
+PROCESSOR_TEST(ProgramFlashTest, P16F887, "testdata/eeprog.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  pins["INT"]->set_external(1);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after read");
 }
 
 int main() {
