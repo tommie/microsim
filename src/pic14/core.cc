@@ -54,11 +54,12 @@ namespace sim::pic14 {
 
 namespace sim::pic14::internal {
 
-  Core::Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> fosc_changed)
+  Core::Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> pcon_updated, std::function<void()> fosc_changed)
     : extosc_(extosc),
       nv_(nv),
       reset_(std::move(reset), 4),
       option_updated_(std::move(option_updated)),
+      pcon_updated_(std::move(pcon_updated)),
       mclr_(reset_.make_signal()),
       mclr_pin_([this](bool value) {
         mclr_->set(!value);  // MCLR pin is active low.
@@ -70,11 +71,13 @@ namespace sim::pic14::internal {
       lfintosc_(sim::core::Nanoseconds(32258)),  // 31 kHz
       fosc_(std::move(fosc_changed), &hfintosc_, 2),
       option_reg_(SingleRegisterBackend<uint8_t>(0xFF)),
+      pcon_reg_(SingleRegisterBackend<uint8_t>(0x10)),
       osccon_reg_(SingleRegisterBackend<uint8_t>(0x68 | 0x06)),
       config1_(SingleRegisterBackend<uint16_t>(0xFF)) {}
 
   void Core::reset() {
     option_reg_.reset();
+    pcon_reg_.reset();
     osccon_reg_.reset();
     config1_.write(nv_->config()[config1_.ADDR]);
     update_system_clock();
@@ -87,6 +90,7 @@ namespace sim::pic14::internal {
   uint8_t Core::read_register(uint16_t addr) {
     switch (addr) {
     case 0x81: return option_reg_.read();
+    case 0x8E: return pcon_reg_.read();
     case 0x8F: return osccon_reg_.read();
     default: return 0;
     }
@@ -94,23 +98,30 @@ namespace sim::pic14::internal {
 
   void Core::write_register(uint16_t addr, uint8_t value) {
     switch (addr) {
-    case 0x81: {
+    case 0x81:
       if (value != option_reg_.read()) {
         option_reg_.write(value);
         option_updated_();
       }
       break;
-    }
-    case 0x8F: {
+
+    case 0x8E:
+      if (value != pcon_reg_.read()) {
+        pcon_reg_.write_masked(value);
+        pcon_updated_();
+      }
+      break;
+
+    case 0x8F:
       osccon_reg_.write_masked(value);
       update_system_clock();
       break;
-    }
     }
   }
 
   sim::core::Advancement Core::advance_to(const sim::core::AdvancementLimit &limit) {
     if (por_->value()) {
+      pcon_reg_.set_por(true);
       por_->set(false);
     }
 

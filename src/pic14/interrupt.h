@@ -66,6 +66,26 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
+    class MaskablePeripheralEdgeSignal {
+    public:
+      MaskablePeripheralEdgeSignal(InterruptMux *mux, int reg_index, uint8_t flag_mask)
+        : mux_(mux), reg_index_(reg_index), flag_mask_(flag_mask) {}
+
+      void reset() { active_ = false; }
+      void raise();
+
+      MaskablePeripheralEdgeSignal(MaskablePeripheralEdgeSignal&&) = default;
+      MaskablePeripheralEdgeSignal& operator =(MaskablePeripheralEdgeSignal&&) = default;
+      MaskablePeripheralEdgeSignal(const MaskablePeripheralEdgeSignal&) = delete;
+      MaskablePeripheralEdgeSignal& operator =(const MaskablePeripheralEdgeSignal&) = delete;
+
+    private:
+      InterruptMux *mux_;
+      int reg_index_;
+      uint8_t flag_mask_;
+      bool active_ = false;
+    };
+
     explicit InterruptMux(InterruptSignal interrupt)
       : interrupt_(std::move(interrupt)),
         intcon_(SingleRegisterBackend<uint8_t>(0)) {}
@@ -74,6 +94,11 @@ namespace sim::pic14::internal {
     /// using `flag_bit` as the flag. Calling `raise()` multiple times
     /// does nothing to the flag until `reset()` is called.
     MaskableIntconEdgeSignal make_maskable_edge_signal_intcon(uint8_t en_bit, uint8_t flag_bit);
+
+    /// Creates an interrupt signal masked by the PIEx and using PIRx
+    /// as theflag. Calling `raise()` multiple times does nothing to
+    /// the flag until `reset()` is called.
+    MaskablePeripheralEdgeSignal make_maskable_edge_signal_peripheral(uint8_t bit);
 
     /// Returns whether any interrupt signal is raised. It does not
     /// check the GIE bit.

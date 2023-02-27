@@ -11,6 +11,7 @@ libpic14_la_SOURCES = \
 	p16f88x.cc \
 	port.cc \
 	timer0.cc \
+	ulpwu.cc \
 	watchdog.cc
 
 include_HEADERS = \
@@ -25,6 +26,7 @@ include_HEADERS = \
 	port.h \
 	register.h \
 	timer0.h \
+	ulpwu.h \
 	watchdog.h
 
 check_PROGRAMS = p16f88x_test

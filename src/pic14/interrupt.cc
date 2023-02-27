@@ -11,9 +11,22 @@ namespace sim::pic14::internal {
     }
   }
 
+  void InterruptMux::MaskablePeripheralEdgeSignal::raise() {
+    if (!active_) {
+      mux_->pir_[reg_index_] |= flag_mask_;
+      active_ = true;
+
+      if (mux_->is_active()) mux_->interrupt_();
+    }
+  }
+
   InterruptMux::MaskableIntconEdgeSignal InterruptMux::make_maskable_edge_signal_intcon(uint8_t en_bit, uint8_t flag_bit) {
     intcon_en_bits_[flag_bit] = en_bit;
     return MaskableIntconEdgeSignal(this, 1u << flag_bit);
+  }
+
+  InterruptMux::MaskablePeripheralEdgeSignal InterruptMux::make_maskable_edge_signal_peripheral(uint8_t bit) {
+    return MaskablePeripheralEdgeSignal(this, bit / 8, 1u << (bit % 8));
   }
 
   bool InterruptMux::is_active() const {

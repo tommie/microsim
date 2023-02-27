@@ -151,6 +151,21 @@ PROCESSOR_TEST(ExtInterruptTest, P16F887, "testdata/extint.hex") {
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after pin change");
 }
 
+PROCESSOR_TEST(UltraLowPowerWakeUpTest, P16F887, "testdata/ulpwu.hex") {
+  pins["ULPWU"]->set_external(1);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0 before pin change");
+  if (pins["ULPWU"]->resistance() > 0.55) fail("ULPWU resistance should be 0.5 before pin change");
+
+  pins["ULPWU"]->set_external(0);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after pin change");
+}
+
 PROCESSOR_TEST(GlobalInterruptTest, P16F887, "testdata/gie.hex") {
   advance_until_sleep();
 

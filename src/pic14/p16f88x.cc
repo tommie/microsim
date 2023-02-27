@@ -31,7 +31,7 @@ namespace sim::pic14::internal {
   }
 
   template<uint16_t ProgSize, uint16_t EEDataSize, int NumPorts>
-  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc)
+  P16F88X<ProgSize, EEDataSize, NumPorts>::P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc)
     : Device(listener),
       nv_(NonVolatile::Config{PROG_SIZE, CONFIG_SIZE, EEDATA_SIZE}),
       core_(extosc, &nv_, [this](bool raised) {
@@ -41,6 +41,8 @@ namespace sim::pic14::internal {
       }, [this]() {
         wdt_.option_reg_updated();
         timer0_.option_reg_updated();
+      }, [this]() {
+        ulpwu_.pcon_updated();
       }, [this]() {
         executor_.fosc_changed();
         timer0_.fosc_changed();
@@ -68,6 +70,7 @@ namespace sim::pic14::internal {
         internal::Port(4, listener),
       },
       portb_(1, listener, interrupt_mux_.make_maskable_edge_signal_intcon(3, 0), interrupt_mux_.make_maskable_edge_signal_intcon(4, 1), core_.option_reg()),
+      ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
         &core_,
@@ -90,6 +93,8 @@ namespace sim::pic14::internal {
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
     backmap[0x81] = backs.size(); backs.push_back(&core_);
+    backmap[0x8E] = backs.size(); backs.push_back(&core_);
+    backmap[0x8F] = backs.size(); backs.push_back(&core_);
     backmap[0x105] = backs.size(); backs.push_back(&wdt_);
 
     return internal::DataBus(FILE_BUS_SIZE, 0, std::move(backs), std::move(backmap), address_map());
@@ -100,6 +105,7 @@ namespace sim::pic14::internal {
     std::vector<sim::core::PinDescriptor> descrs;
 
     descrs.push_back({.pin = core_.mclr_pin(), .name = "MCLR"});
+    descrs.push_back({.pin = ulpwu_.pin(), .name = "ULPWU"});
 
     std::string name_buf("RA0");
     for (auto &port : ports_) {

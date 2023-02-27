@@ -77,6 +77,30 @@ namespace sim::pic14::internal {
   };
 
   template<typename Backend>
+  class PConRegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
+    static constexpr uint8_t WRITE_MASK = 0x33;
+
+  public:
+    enum Bits {
+      BOR, POR, SBOREN = 4, ULPWUE,
+    };
+
+    explicit PConRegBase(Backend backend) : BitRegister<Backend>(backend) {}
+
+    void write_masked(uint8_t v) { Base::template set_masked<WRITE_MASK>(v); }
+
+    bool bor() const { return !Base::template bit<BOR>(); }
+    bool por() const { return !Base::template bit<POR>(); }
+    void set_por(bool inv_v) { Base::template set_bit<POR>(!inv_v); }
+    bool sboren() const { return Base::template bit<SBOREN>(); }
+    bool ulpwue() const { return Base::template bit<ULPWUE>(); }
+
+    void reset() { Base::write(0x13); }
+  };
+
+  template<typename Backend>
   class OscConRegBase : public BitRegister<Backend> {
     using Base = BitRegister<Backend>;
 
@@ -133,14 +157,16 @@ namespace sim::pic14::internal {
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
     using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x81>>;
+    using PConReg = PConRegBase<MultiRegisterBackend<Core, 0x8E>>;
     using OscConReg = OscConRegBase<MultiRegisterBackend<Core, 0x8F>>;
     using Config1Reg = Config1RegBase<SingleRegisterBackend<uint16_t>>;
 
-    Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> fosc_changed);
+    Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> pcon_updated, std::function<void()> fosc_changed);
 
     void reset();
 
     OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
+    PConReg pcon_reg() { return PConReg(MultiRegisterBackend<Core, 0x8E>(this)); }
     const Config1Reg& config1() const { return config1_; }
 
     sim::core::Clock* lfintosc() { return &lfintosc_; }
@@ -170,6 +196,7 @@ namespace sim::pic14::internal {
     NonVolatile *nv_;
     sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
     std::function<void()> option_updated_;
+    std::function<void()> pcon_updated_;
 
     sim::core::Signal<bool> *mclr_;
     InputPin mclr_pin_;
@@ -182,6 +209,7 @@ namespace sim::pic14::internal {
     sim::core::ClockModifier fosc_;
 
     OptionRegBase<SingleRegisterBackend<uint8_t>> option_reg_;
+    PConRegBase<SingleRegisterBackend<uint8_t>> pcon_reg_;
     OscConRegBase<SingleRegisterBackend<uint8_t>> osccon_reg_;
     Config1Reg config1_;
   };

@@ -8,6 +8,7 @@
 #include "port.h"
 #include "register.h"
 #include "timer0.h"
+#include "ulpwu.h"
 #include "watchdog.h"
 
 #include <array>
@@ -28,7 +29,7 @@ namespace sim::pic14 {
       static const uint16_t CONFIG_SIZE = 9;
 
     public:
-      explicit P16F88X(core::DeviceListener *listener, sim::core::Clock *extosc);
+      explicit P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc);
 
       std::vector<sim::core::Clock*> clock_sources() override { return core_.clock_sources(); }
 
@@ -53,6 +54,7 @@ namespace sim::pic14 {
       internal::Timer0 timer0_;
       std::array<internal::Port, NumPorts - 1> ports_;
       internal::InterruptiblePort portb_;
+      internal::UltraLowPowerWakeUp ulpwu_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;
 
