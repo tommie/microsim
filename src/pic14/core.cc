@@ -73,13 +73,15 @@ namespace sim::pic14::internal {
       option_reg_(SingleRegisterBackend<uint8_t>(0xFF)),
       pcon_reg_(SingleRegisterBackend<uint8_t>(0x10)),
       osccon_reg_(SingleRegisterBackend<uint8_t>(0x68 | 0x06)),
-      config1_(SingleRegisterBackend<uint16_t>(0xFF)) {}
+      config1_(SingleRegisterBackend<uint16_t>(0x3FFF)),
+      config2_(SingleRegisterBackend<uint16_t>(0x3FFF)) {}
 
   void Core::reset() {
     option_reg_.reset();
     pcon_reg_.reset();
     osccon_reg_.reset();
     config1_.write(nv_->config()[config1_.ADDR]);
+    config2_.write(nv_->config()[config2_.ADDR]);
     update_system_clock();
   }
 

@@ -151,6 +151,23 @@ namespace sim::pic14::internal {
     bool debug() const { return !Base::template bit<DEBUG>(); }
   };
 
+  template<typename Backend>
+  class Config2RegBase : public BitRegister<Backend> {
+    using Base = BitRegister<Backend>;
+
+  public:
+    static constexpr uint16_t ADDR = 8;
+
+    enum Bits {
+      BOR4V = 8, WRT0, WRT1,
+    };
+
+    explicit Config2RegBase(Backend backend) : BitRegister<Backend>(backend) {}
+
+    bool bor4v() const { return Base::template bit<BOR4V>(); }
+    uint8_t wrt() const { return Base::template bit_field<WRT0, 2>(); }
+  };
+
   /// Core parts that are shared by multiple other modules.
   class Core : public RegisterBackend, public sim::core::Schedulable {
   public:
@@ -160,6 +177,7 @@ namespace sim::pic14::internal {
     using PConReg = PConRegBase<MultiRegisterBackend<Core, 0x8E>>;
     using OscConReg = OscConRegBase<MultiRegisterBackend<Core, 0x8F>>;
     using Config1Reg = Config1RegBase<SingleRegisterBackend<uint16_t>>;
+    using Config2Reg = Config2RegBase<SingleRegisterBackend<uint16_t>>;
 
     Core(sim::core::Clock *extosc, NonVolatile *nv, std::function<void(bool)> reset, std::function<void()> option_updated, std::function<void()> pcon_updated, std::function<void()> fosc_changed);
 
@@ -168,6 +186,7 @@ namespace sim::pic14::internal {
     OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
     PConReg pcon_reg() { return PConReg(MultiRegisterBackend<Core, 0x8E>(this)); }
     const Config1Reg& config1() const { return config1_; }
+    const Config2Reg& config2() const { return config2_; }
 
     sim::core::Clock* lfintosc() { return &lfintosc_; }
     sim::core::ClockModifier* fosc() { return &fosc_; }
@@ -212,6 +231,7 @@ namespace sim::pic14::internal {
     PConRegBase<SingleRegisterBackend<uint8_t>> pcon_reg_;
     OscConRegBase<SingleRegisterBackend<uint8_t>> osccon_reg_;
     Config1Reg config1_;
+    Config2Reg config2_;
   };
 
 }  // namespace sim::pic14::internal
