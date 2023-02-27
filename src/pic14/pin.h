@@ -16,7 +16,7 @@ namespace sim::pic14 {
 
     void set_external(double v) override {
       bool old = value_;
-      value_ = v;
+      value_ = v >= 0.5;
 
       if (value_ != old) {
         changed_(value_);
