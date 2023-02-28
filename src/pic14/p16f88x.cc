@@ -49,6 +49,7 @@ namespace sim::pic14::internal {
         executor_.fosc_changed();
         timer0_.fosc_changed();
         adc_.fosc_changed();
+        eusart_.fosc_changed();
       }),
       interrupt_mux_([this]() {
         core_.sleep_signal()->set(false);
@@ -79,6 +80,7 @@ namespace sim::pic14::internal {
       adc_(core_.fosc(), interrupt_mux_.make_maskable_edge_signal_peripheral(6)),
       ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
       eprom_(&nv_, core_.lfintosc(), &core_.config2(), interrupt_mux_.make_maskable_edge_signal_peripheral(12), &executor_),
+      eusart_(listener, core_.fosc(),  interrupt_mux_.make_maskable_edge_signal_peripheral(5),  interrupt_mux_.make_maskable_level_signal_peripheral(4)),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
         &core_,
@@ -87,6 +89,7 @@ namespace sim::pic14::internal {
         &timer0_,
         &adc_,
         &eprom_,
+        &eusart_,
       }, this) {}
 
   template<typename Config>
@@ -102,6 +105,7 @@ namespace sim::pic14::internal {
     backmap[0x05 + 2] = backmap[0x85 + 2] = backs.size(); backs.push_back(&ports_[1]);
     backmap[0x05 + 3] = backmap[0x85 + 3] = backs.size(); backs.push_back(&ports_[2]);
     backmap[0x0B] = backmap[0x0C] = backmap[0x0D] = backmap[0x8C] = backmap[0x8D] = backs.size(); backs.push_back(&interrupt_mux_);
+    backmap[0x18] = backmap[0x19] = backmap[0x1A] = backmap[0x98] = backmap[0x99] = backmap[0x9A] = backmap[0x187] = backs.size(); backs.push_back(&eusart_);
     backmap[0x1E] = backmap[0x1F] = backmap[0x9E] = backmap[0x9F] = backs.size(); backs.push_back(&adc_);
     backmap[0x81] = backmap[0x8E] = backmap[0x8F] = backs.size(); backs.push_back(&core_);
     backmap[0x105] = backs.size(); backs.push_back(&wdt_);
@@ -144,6 +148,8 @@ namespace sim::pic14::internal {
       descrs.push_back({.pin = &pin, .name = ss.str()});
     }
 
+    descrs.push_back({.pin = &eusart_.tx_pin(), .name = "TX"});
+
     return descrs;
   }
 
@@ -155,6 +161,7 @@ namespace sim::pic14::internal {
     executor_.reset();
     adc_.reset();
     eprom_.reset();
+    eusart_.reset();
   }
 
   template<typename Config>

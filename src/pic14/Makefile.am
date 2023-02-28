@@ -8,6 +8,7 @@ libpic14_la_SOURCES = \
 	data_bus.cc \
 	eprom.cc \
 	errors.cc \
+	eusart.cc \
 	execution.cc \
 	extint.cc \
 	interrupt.cc \
@@ -23,6 +24,7 @@ include_HEADERS = \
 	data_bus.h \
 	eprom.h \
 	errors.h \
+	eusart.cc \
 	execution.h \
 	extint.h \
 	interrupt.h \

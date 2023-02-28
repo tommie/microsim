@@ -28,6 +28,23 @@ namespace sim::pic14 {
     bool value_ = false;
   };
 
+  /// A simple digital output pin.
+  class OutputPin : public sim::core::Pin {
+  public:
+    explicit OutputPin(bool value = false)
+      : value_(value) {}
+
+    double value() const override { return value_ ? 1 : 0; }
+    double resistance() const override { return 0; }
+
+    void set_external(double v) override {}
+
+    void set_value(bool v) { value_ = v; }
+
+  private:
+    bool value_;
+  };
+
 }  // namespace sim::pic14
 
 #endif  // sim_pic14_pin_h

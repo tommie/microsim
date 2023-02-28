@@ -6,6 +6,7 @@
 #include "adc.h"
 #include "core.h"
 #include "eprom.h"
+#include "eusart.h"
 #include "execution.h"
 #include "extint.h"
 #include "port.h"
@@ -73,6 +74,7 @@ namespace sim::pic14 {
       internal::ADConverter adc_;
       internal::UltraLowPowerWakeUp ulpwu_;
       internal::EPROM<Config::PgmDatBufSize, self_write_cutoffs<Config::ProgSize>()> eprom_;
+      internal::EUSART eusart_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;
 

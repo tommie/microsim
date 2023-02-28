@@ -28,6 +28,8 @@ namespace sim::core {
       : cs_(&sim_clock_, std::begin(clocks), std::end(clocks)),
         s_(std::begin(objects), std::end(objects)) {}
 
+    const SimulationClock& sim_clock() const { return sim_clock_; }
+
     Advancement advance_to(const AdvancementLimit &limit);
 
   private:

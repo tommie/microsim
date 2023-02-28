@@ -1,5 +1,6 @@
 #include <array>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <list>
 #include <unordered_map>
@@ -7,6 +8,7 @@
 
 #include "../core/ihex.h"
 #include "../core/trace.h"
+#include "../testing/nrz.h"
 #include "../testing/testing.h"
 #include "../util/status.h"
 #include "p16f88x.h"
@@ -24,13 +26,37 @@ sim::util::Status load_testdata_ihex(Proc *proc, std::string_view path) {
   return sim::core::load_ihex(ihex, std::bind_front(&sim::pic14::ICSP::load_program, &icsp));
 }
 
+class NRZReceiver {
+public:
+  NRZReceiver(const sim::core::SimulationClock *sim_clock, sim::core::Pin *pin, unsigned int num_data_bits, sim::core::Duration bit_duration)
+    : sim_clock_(sim_clock), rcvr_(num_data_bits, bit_duration.count()), pin_(pin) {}
+
+  std::u16string_view received() const { return rcvr_.received(); }
+
+  void pin_changed(sim::core::Pin *pin) {
+    if (pin != pin_) return;
+
+    rcvr_.signal_changed(sim_clock_->now().time_since_epoch().count(), pin->value());
+  }
+
+private:
+  const sim::core::SimulationClock *sim_clock_;
+  sim::testing::NRZReceiver rcvr_;
+  sim::core::Pin *pin_;
+};
+
 class DeviceListener : public sim::core::DeviceListener {
 public:
-  void pin_changed(sim::core::Pin* pin, PinChange change) override {
-    std::cout << "  pin_changed " << pin_descrs[pin].name << " " << (change == PinChange::VALUE ? "value" : "res") << " " << pin->value() << ":" << (pin->resistance() < 0.5 ? "o" : "i") << std::endl;
+  void pin_changed(sim::core::Pin *pin, PinChange change) override {
+    std::cout << "  " << std::setw(6) << sim_clock->now().time_since_epoch().count() << " pin_changed " << pin_descrs[pin].name << " " << (change == PinChange::VALUE ? "value" : "res") << " " << pin->value() << ":" << (pin->resistance() < 0.5 ? "o" : "i") << std::endl;
+
+    if (nrz_rcvr_) nrz_rcvr_->pin_changed(pin);
   }
 
   std::unordered_map<sim::core::Pin*, sim::core::PinDescriptor> pin_descrs;
+  const sim::core::SimulationClock *sim_clock;
+
+  NRZReceiver *nrz_rcvr_ = nullptr;
 };
 
 void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) {
@@ -81,11 +107,15 @@ public:
   ProcessorTestCase(std::string_view firmware)
     : firmware_(firmware), fosc_(std::chrono::seconds(1)), proc(&listener_, &fosc_),
       sim_(sim::core::SimulationContext({&fosc_}, {&proc}).make_simulator()) {
+    listener_.sim_clock = &sim_.sim_clock();
+
     for (const auto &descr : proc.pins()) {
       listener_.pin_descrs[descr.pin] = descr;
       pins[descr.name] = descr.pin;
     }
   }
+
+  const sim::core::SimulationClock& sim_clock() const { return sim_.sim_clock(); }
 
 protected:
   void advance_until_sleep() {
@@ -117,6 +147,10 @@ protected:
 
       dump_trace_buffer();
     }
+  }
+
+  void set_nrz_receiver(NRZReceiver *rcvr) {
+    listener_.nrz_rcvr_ = rcvr;
   }
 
   sim::util::Status setUp() override {
@@ -240,6 +274,18 @@ PROCESSOR_TEST(ADConverterTest, P16F887, "testdata/adc.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after ADC");
+}
+
+PROCESSOR_TEST(EUSARTAsyncTransmitTest, P16F887, "testdata/eusart_async_tx.hex") {
+  NRZReceiver rcvr(&sim_clock(), pins["TX"], 8, sim::core::Microseconds(16));
+  set_nrz_receiver(&rcvr);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
+
+  if (rcvr.received().empty()) fail("No byte transmitted");
+  if (rcvr.received()[0] != 42) fail("Byte transmitted should be 42");
 }
 
 int main() {
