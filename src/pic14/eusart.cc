@@ -19,8 +19,26 @@ namespace sim::pic14::internal {
     if (!eusart_->rcsta_reg_.spen() || !eusart_->rcsta_reg_.cren())
       return;
 
-    if (!v && rsr_bits_ == 0) {
+    if (eusart_->baudctl_reg_.abden()) {
+      if (v) {
+        if (rsr_bits_ == 0) {
+          eusart_->rc_fosc_.reset();
+          eusart_->baudctl_reg_.set_rcidl(false);
+        }
+
+        if (++rsr_bits_ == 5) {
+          unsigned long brg = eusart_->rc_fosc_.delta().count() / 8;
+
+          eusart_->spbrg_reg_.write(brg);
+          eusart_->spbrgh_reg_.write(brg >> 8);
+          eusart_->baudctl_reg_.update_abd_done(brg >= 0x10000);
+          eusart_->push_rcreg(0);
+          rsr_bits_ = 0;
+        }
+      }
+    } else if (!v && rsr_bits_ == 0) {
       eusart_->rc_fosc_.reset();
+      eusart_->baudctl_reg_.set_rcidl(false);
       eusart_->schedule_immediately();
     }
   }
@@ -61,6 +79,9 @@ namespace sim::pic14::internal {
 
   sim::core::TimePoint EUSART::AsyncImpl::advance_rc() {
     if (!eusart_->rcsta_reg_.cren())
+      return sim::core::SimulationClock::NEVER;
+
+    if (eusart_->baudctl_reg_.abden())
       return sim::core::SimulationClock::NEVER;
 
     if (rsr_bits_ == 0) {
@@ -294,6 +315,8 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::push_rcreg(uint16_t v) {
+    baudctl_reg_.set_rcidl(true);
+
     if (rcsta_reg_.oerr())
       return;
 

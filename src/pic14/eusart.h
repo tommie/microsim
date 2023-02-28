@@ -31,11 +31,17 @@ namespace sim::pic14::internal {
     void write_masked(uint8_t v) { Base::template set_masked<WRITE_MASK>(v); }
 
     bool abden() const { return Base::template bit<ABDEN>(); }
+    void set_abden(bool v) { Base::template set_bit<ABDEN>(v); }
     bool wue() const { return Base::template bit<WUE>(); }
     bool brg16() const { return Base::template bit<BRG16>(); }
     bool sckp() const { return Base::template bit<SCKP>(); }
     bool rcidl() const { return Base::template bit<RCIDL>(); }
+    void set_rcidl(bool v) { Base::template set_bit<RCIDL>(v); }
     bool abdovf() const { return Base::template bit<ABDOVF>(); }
+
+    void update_abd_done(bool ovf) {
+      Base::template set_masked<(1u << ABDEN) | (1u << RCIDL) | (1u << ABDOVF)>((1u << RCIDL) | ((ovf ? 1u : 0u) << ABDOVF));
+    }
 
     void reset() { Base::write(0x40); }
   };
