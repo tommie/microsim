@@ -10,21 +10,15 @@
 
 namespace sim::core {
 
-  class TaskQueue;
+  class Scheduler;
 
   struct AdvancementLimit {
-    /// The time at which to stop the simulation, or NEVER.
-    TimePoint end_time = SimulationClock::NEVER;
-
-    /// If provided, simulation stops when it returns false. It is
-    /// always valid when used as argument to
-    /// `Schedulable::advance_to`.
+    /// If provided, simulation stops when it returns false.
     ///
     /// This function may be invoked any number of times during
-    /// `advance_to`; do not count invocations, except that before the
-    /// first invocation, some Schedulable will have been given a
-    /// chance to advance.
-    std::function<bool()> cond;
+    /// `advance_to`; do not count invocations. Any immediate
+    /// schedulables will have been run before this is called.
+    std::function<bool(TimePoint)> can_advance_to;
 
     /// This function must be invoked after every time advancement. It
     /// is provided as an alternative to returning from
@@ -45,7 +39,6 @@ namespace sim::core {
   /// An object driven by some clock.
   class Schedulable {
     friend class Scheduler;
-    friend class TaskQueue;
 
   public:
     /// Advances the object within the given limits.
@@ -58,33 +51,15 @@ namespace sim::core {
     void schedule_immediately();
 
   private:
-    TaskQueue *task_queue_ = nullptr;
+    Scheduler *scheduler_ = nullptr;
     TimePoint next_time_ = {};
   };
 
-  /// A set of tasks to run. Order is not guaranteed.
-  class TaskQueue {
-  public:
-    template<typename I>
-    TaskQueue(I begin, I end, Schedulable *parent = nullptr)
-      : queue_(begin, end), parent_(parent) {}
-
-    /// Adds a schedulable for execution. It is a no-op if the
-    /// schedulable is already in the queue.
-    void enqueue(Schedulable *s) {
-      queue_.insert(s);
-      if (parent_) {
-        parent_->schedule_immediately();
-      }
-    }
-
-  protected:
-    std::unordered_set<Schedulable*> queue_;
-    Schedulable *parent_;
-  };
-
   /// A scheduler running objects in lockstep.
-  class Scheduler : protected TaskQueue {
+  class Scheduler {
+    friend class AdvanceMarker;
+    friend class Schedulable;
+
   public:
     template<typename C = std::initializer_list<Schedulable*>>
     explicit Scheduler(C objects, Schedulable *parent = nullptr)
@@ -92,9 +67,9 @@ namespace sim::core {
 
     template<typename I>
     Scheduler(I begin, I end, Schedulable *parent = nullptr)
-      : TaskQueue(begin, end, parent), all_(begin, end) {
+      : all_(begin, end), immediates_(begin, end), parent_(parent) {
       for (auto *o : all_) {
-        o->task_queue_ = this;
+        o->scheduler_ = this;
       }
     }
 
@@ -106,19 +81,31 @@ namespace sim::core {
     Advancement advance_to(const AdvancementLimit &limit);
 
   private:
-    TimePoint next_time() const;
-    void run_one(Schedulable *s, const AdvancementLimit &limit);
+    /// Adds a schedulable for execution. It is a no-op if the
+    /// schedulable is already in the queue.
+    void enqueue(Schedulable *s) {
+      immediates_.insert(s);
+      if (parent_ && !advancing_) {
+        parent_->schedule_immediately();
+      }
+    }
+
+    bool advance_next(const AdvancementLimit &limit);
+    void run_immediates(const AdvancementLimit &limit);
 
   private:
     std::vector<Schedulable*> all_;
     std::priority_queue<std::pair<TimePoint, Schedulable*>,
                         std::vector<std::pair<TimePoint, Schedulable*>>,
                         std::greater<>> time_queue_;
+    std::unordered_set<Schedulable*> immediates_;
+    Schedulable *parent_;
+    bool advancing_ = false;
   };
 
   inline void Schedulable::schedule_immediately() {
-    if (task_queue_) {
-      task_queue_->enqueue(this);
+    if (scheduler_) {
+      scheduler_->enqueue(this);
     }
   }
 

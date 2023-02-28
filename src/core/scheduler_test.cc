@@ -19,41 +19,39 @@ namespace sim::core {
     int advance_calls = 0;
   };
 
+  AdvancementLimit advance_to_time(int limit) {
+    return {
+      .can_advance_to = [limit = TimePoint(Duration(limit))](TimePoint at) { return at <= limit; },
+    };
+  }
+
   SIM_TEST(SchedulerSingleTest) {
     TestSchedulable s;
     s.next = 1;
     Scheduler scheduler(std::vector<Schedulable*>{&s});
 
-    auto got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(0))});
+    auto got = scheduler.advance_to(advance_to_time(0));
     if (got.next_time != TimePoint(Duration(1))) fail("next_time not 1");
     if (s.advance_calls != 1) fail("advance_calls not 1");
 
     s.next = 2;
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(1))});
+    got = scheduler.advance_to(advance_to_time(1));
     if (got.next_time != TimePoint(Duration(2))) fail("next_time not 2");
 
     s.next = -1;
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(2))});
+    got = scheduler.advance_to(advance_to_time(2));
     if (!is_never(got.next_time)) fail("next_time not NEVER");
 
     s.next = 4;
 
     s.schedule_immediately();
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(3))});
+    got = scheduler.advance_to(advance_to_time(3));
     if (got.next_time != TimePoint(Duration(4))) fail("next_time not 4");
 
     if (s.advance_calls != 4) fail("advance_calls not 4");
-
-    s.next = -1;
-
-    got = scheduler.advance_to(AdvancementLimit{
-        .end_time = TimePoint(Duration(10)),
-        .cond = []() { return false; },
-      });
-    if (s.advance_calls != 5) fail("advance_calls not 5");
   }
 
   SIM_TEST(SchedulerParentTest) {
@@ -77,28 +75,28 @@ namespace sim::core {
     s2.next = 2;
     Scheduler scheduler(std::vector<Schedulable*>{&s1, &s2});
 
-    auto got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(0))});
+    auto got = scheduler.advance_to(advance_to_time(0));
     if (got.next_time != TimePoint(Duration(1))) fail("next_time not 1");
     if (s1.advance_calls != 1) fail("s1.advance_calls not 1");
     if (s2.advance_calls != 1) fail("s2.advance_calls not 1");
 
     s1.next = 3;
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(1))});
+    got = scheduler.advance_to(advance_to_time(1));
     if (got.next_time != TimePoint(Duration(2))) fail("next_time not 2");
     if (s1.advance_calls != 2) fail("s1.advance_calls not 2");
     if (s2.advance_calls != 1) fail("s2.advance_calls not 1");
 
     s2.next = 4;
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(2))});
+    got = scheduler.advance_to(advance_to_time(2));
     if (got.next_time != TimePoint(Duration(3))) fail("next_time not 3");
     if (s1.advance_calls != 2) fail("s1.advance_calls not 2");
     if (s2.advance_calls != 2) fail("s2.advance_calls not 2");
 
     s1.next = s2.next = -1;
 
-    got = scheduler.advance_to(AdvancementLimit{.end_time = TimePoint(Duration(10))});
+    got = scheduler.advance_to(advance_to_time(10));
     if (!is_never(got.next_time)) fail("next_time not -1");
     if (s1.advance_calls != 3) fail("s1.advance_calls not 3");
     if (s2.advance_calls != 3) fail("s2.advance_calls not 3");

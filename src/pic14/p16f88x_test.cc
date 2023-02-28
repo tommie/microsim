@@ -90,7 +90,7 @@ protected:
       advance_during_sleep();
 
     sim::core::AdvancementLimit limit = {
-      .cond = [this]() {
+      .can_advance_to = [this](sim::core::TimePoint) {
         return !proc.is_sleeping();
       },
     };
@@ -103,7 +103,7 @@ protected:
 
   void advance_during_sleep() {
     sim::core::AdvancementLimit limit = {
-      .cond = [this]() {
+      .can_advance_to = [this](sim::core::TimePoint) {
         return proc.is_sleeping();
       },
     };
