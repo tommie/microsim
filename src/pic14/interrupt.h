@@ -86,6 +86,26 @@ namespace sim::pic14::internal {
       bool active_ = false;
     };
 
+    class MaskablePeripheralLevelSignal {
+    public:
+      MaskablePeripheralLevelSignal(InterruptMux *mux, int reg_index, uint8_t flag_mask)
+        : mux_(mux), reg_index_(reg_index), flag_mask_(flag_mask) {}
+
+      void reset();
+      void raise();
+
+      MaskablePeripheralLevelSignal(MaskablePeripheralLevelSignal&&) = default;
+      MaskablePeripheralLevelSignal& operator =(MaskablePeripheralLevelSignal&&) = default;
+      MaskablePeripheralLevelSignal(const MaskablePeripheralLevelSignal&) = delete;
+      MaskablePeripheralLevelSignal& operator =(const MaskablePeripheralLevelSignal&) = delete;
+
+    private:
+      InterruptMux *mux_;
+      int reg_index_;
+      uint8_t flag_mask_;
+      bool active_ = false;
+    };
+
     explicit InterruptMux(InterruptSignal interrupt)
       : interrupt_(std::move(interrupt)),
         intcon_(SingleRegisterBackend<uint8_t>(0)) {}
@@ -96,9 +116,15 @@ namespace sim::pic14::internal {
     MaskableIntconEdgeSignal make_maskable_edge_signal_intcon(uint8_t en_bit, uint8_t flag_bit);
 
     /// Creates an interrupt signal masked by the PIEx and using PIRx
-    /// as theflag. Calling `raise()` multiple times does nothing to
+    /// as the flag. Calling `raise()` multiple times does nothing to
     /// the flag until `reset()` is called.
     MaskablePeripheralEdgeSignal make_maskable_edge_signal_peripheral(uint8_t bit);
+
+    /// Creates an interrupt signal masked by the PIEx and using PIRx
+    /// as the flag. Calling `raise()` multiple times does nothing to
+    /// the flag until `reset()` is called. The flag cannot be cleared
+    /// by software.
+    MaskablePeripheralLevelSignal make_maskable_level_signal_peripheral(uint8_t bit);
 
     /// Returns whether any interrupt signal is raised. It does not
     /// check the GIE bit.
@@ -123,6 +149,7 @@ namespace sim::pic14::internal {
     IntConRegImpl intcon_;
     std::array<uint8_t, 2> pie_ = {0, 0};
     std::array<uint8_t, 2> pir_ = {0, 0};
+    std::array<uint8_t, 2> pir_ro_mask_ = {0, 0};
 
     std::array<uint8_t, 8> intcon_en_bits_ = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   };
