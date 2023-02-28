@@ -80,7 +80,7 @@ namespace sim::pic14::internal {
       adc_(core_.fosc(), interrupt_mux_.make_maskable_edge_signal_peripheral(6)),
       ulpwu_(listener, core_.pcon_reg(), interrupt_mux_.make_maskable_edge_signal_peripheral(10)),
       eprom_(&nv_, core_.lfintosc(), &core_.config2(), interrupt_mux_.make_maskable_edge_signal_peripheral(12), &executor_),
-      eusart_(listener, core_.fosc(),  interrupt_mux_.make_maskable_edge_signal_peripheral(5),  interrupt_mux_.make_maskable_level_signal_peripheral(4)),
+      eusart_(listener, core_.fosc(),  interrupt_mux_.make_maskable_level_signal_peripheral(5),  interrupt_mux_.make_maskable_level_signal_peripheral(4)),
       pin_descrs_(build_pin_descrs()),
       scheduler_({
         &core_,
@@ -148,6 +148,7 @@ namespace sim::pic14::internal {
       descrs.push_back({.pin = &pin, .name = ss.str()});
     }
 
+    descrs.push_back({.pin = &eusart_.rc_pin(), .name = "RC"});
     descrs.push_back({.pin = &eusart_.tx_pin(), .name = "TX"});
 
     return descrs;

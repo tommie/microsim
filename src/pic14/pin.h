@@ -23,6 +23,8 @@ namespace sim::pic14 {
       }
     }
 
+    bool external() const { return value_; }
+
   private:
     std::function<void(bool)> changed_;
     bool value_ = false;

@@ -16,6 +16,13 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::AsyncImpl::rc_pin_changed(bool v) {
+    if (!eusart_->rcsta_reg_.spen() || !eusart_->rcsta_reg_.cren())
+      return;
+
+    if (!v && rsr_bits_ == 0) {
+      eusart_->rc_fosc_.reset();
+      eusart_->schedule_immediately();
+    }
   }
 
   void EUSART::AsyncImpl::write_register(uint16_t addr, uint8_t value) {
@@ -44,10 +51,61 @@ namespace sim::pic14::internal {
   }
 
   sim::core::Advancement EUSART::AsyncImpl::advance_to(const sim::core::AdvancementLimit &limit) {
-    if (!eusart_->txsta_reg_.txen())
-      return {};
+    auto next_time = advance_rc();
 
-    if (tsr_bits_ > 0 && eusart_->fosc_.delta() >= eusart_->bit_duration_) {
+    if (auto nt = advance_tx(); !is_never(nt) && (is_never(next_time) || next_time > nt))
+      next_time = nt;
+
+    return { .next_time = next_time };
+  }
+
+  sim::core::TimePoint EUSART::AsyncImpl::advance_rc() {
+    if (!eusart_->rcsta_reg_.cren())
+      return sim::core::SimulationClock::NEVER;
+
+    if (rsr_bits_ == 0) {
+      if (eusart_->rc_fosc_.delta() < eusart_->bit_duration_ / 2) {
+        return eusart_->rc_fosc_.at((eusart_->bit_duration_ + sim::core::Clock::duration(1)) / 2);
+      }
+
+      if (eusart_->rc_pin_.external()) {
+        // The start bit was compromised.
+        return sim::core::SimulationClock::NEVER;
+      }
+
+      eusart_->rc_fosc_.reset();
+      ++rsr_bits_;
+      rsr_ = 0;
+    } else if (eusart_->rc_fosc_.delta() >= eusart_->bit_duration_) {
+      rsr_ >>= 1;
+      rsr_ |= (eusart_->rc_pin_.external() ? 1u : 0u) << 15;
+
+      if (rsr_bits_ == (eusart_->rcsta_reg_.rx9() ? 10 : 9)) {
+        if (eusart_->rcsta_reg_.rx9()) {
+          rsr_ >>= 16 - 8;
+        } else {
+          rsr_ >>= 16 - 9;
+          rsr_ |= (rsr_ << 1) & 0x200;  // Promote the last bit to FERR.
+        }
+
+        eusart_->push_rcreg(rsr_);
+        rsr_bits_ = 0;
+
+        return sim::core::SimulationClock::NEVER;
+      }
+
+      eusart_->rc_fosc_.reset();
+      ++rsr_bits_;
+    }
+
+    return eusart_->rc_fosc_.at(eusart_->bit_duration_);
+  }
+
+  sim::core::TimePoint EUSART::AsyncImpl::advance_tx() {
+    if (!eusart_->txsta_reg_.txen())
+      return sim::core::SimulationClock::NEVER;
+
+    if (tsr_bits_ > 0 && eusart_->tx_fosc_.delta() >= eusart_->bit_duration_) {
       eusart_->set_tx_pin((tsr_ & 1) != 0);
 
       tsr_ >>= 1;
@@ -60,13 +118,11 @@ namespace sim::pic14::internal {
           load_tsr();
         }
       } else {
-        eusart_->fosc_.reset();
+        eusart_->tx_fosc_.reset();
       }
     }
 
-    return {
-      .next_time = (tsr_bits_ > 0 ? eusart_->fosc_.at(eusart_->bit_duration_) : sim::core::SimulationClock::NEVER),
-    };
+    return (tsr_bits_ > 0 ? eusart_->tx_fosc_.at(eusart_->bit_duration_) : sim::core::SimulationClock::NEVER);
   }
 
   void EUSART::AsyncImpl::load_tsr() {
@@ -85,7 +141,7 @@ namespace sim::pic14::internal {
     tx_reg_valid_ = false;
     eusart_->tx_interrupt_.raise();
 
-    eusart_->fosc_.reset();
+    eusart_->tx_fosc_.reset();
   }
 
   EUSART::SyncImpl::SyncImpl(EUSART *eusart)
@@ -101,9 +157,10 @@ namespace sim::pic14::internal {
     return {};
   }
 
-  EUSART::EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralEdgeSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt)
+  EUSART::EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralLevelSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt)
     : listener_(listener),
-      fosc_(fosc),
+      rc_fosc_(fosc),
+      tx_fosc_(fosc),
       rc_interrupt_(std::move(rc_interrupt)),
       tx_interrupt_(std::move(tx_interrupt)),
       rc_pin_([this](bool v) {
@@ -114,7 +171,6 @@ namespace sim::pic14::internal {
       rcsta_reg_(SingleRegisterBackend<uint8_t>(0)),
       txsta_reg_(SingleRegisterBackend<uint8_t>(0)),
       tx_reg_(0),
-      rc_reg_(0),
       spbrg_reg_(0),
       spbrgh_reg_(0),
       baudctl_reg_(SingleRegisterBackend<uint8_t>(0)) {}
@@ -127,11 +183,12 @@ namespace sim::pic14::internal {
 
     rcsta_reg_.reset();
     tx_reg_.write(0);
-    rc_reg_.write(0);
     txsta_reg_.reset();
     spbrg_reg_.write(0);
     spbrgh_reg_.write(0);
     baudctl_reg_.reset();
+    rcreg_fifo_head_ = 0;
+    rcreg_fifo_tail_ = 0;
 
     update_impl();
     update_bit_duration();
@@ -141,7 +198,7 @@ namespace sim::pic14::internal {
     switch (addr) {
     case 0x18: return rcsta_reg_.read();
     case 0x19: return tx_reg_.read();
-    case 0x1A: return rc_reg_.read();
+    case 0x1A: return pop_rcreg();
     case 0x98: return txsta_reg_.read();
     case 0x99: return spbrg_reg_.read();
     case 0x9A: return spbrgh_reg_.read();
@@ -154,11 +211,19 @@ namespace sim::pic14::internal {
     switch (addr) {
     case 0x18:
       rcsta_reg_.write_masked(value);
+      if (!rcsta_reg_.spen() || !rcsta_reg_.cren())
+        rcsta_reg_.set_oerr(false);
+
       update_impl();
       break;
 
-    case 0x19: tx_reg_.write(value); break;
-    case 0x1A: rc_reg_.write(value); break;
+    case 0x19:
+      tx_reg_.write(value);
+      break;
+
+    case 0x1A:
+      rcreg_fifo_[rcreg_fifo_tail_] = value;
+      break;
 
     case 0x98:
       txsta_reg_.write_masked(value);
@@ -223,8 +288,46 @@ namespace sim::pic14::internal {
 
     if (bit_duration_ != dur) {
       bit_duration_ = dur;
-      fosc_.reset();
+      rc_fosc_.reset();
+      tx_fosc_.reset();
     }
+  }
+
+  void EUSART::push_rcreg(uint16_t v) {
+    if (rcsta_reg_.oerr())
+      return;
+
+    rcreg_fifo_[rcreg_fifo_head_] = v;
+    if (rcreg_fifo_head_ == rcreg_fifo_tail_) {
+      rcsta_reg_.set_rx9d((v & 0x100) != 0);
+      rcsta_reg_.set_ferr((v & 0x200) == 0);  // Inverted.
+    }
+
+    if (++rcreg_fifo_head_ >= rcreg_fifo_.size())
+      rcreg_fifo_head_ = 0;
+
+    if (rcreg_fifo_head_ == rcreg_fifo_tail_)
+      rcsta_reg_.set_oerr(true);
+
+    rc_interrupt_.raise();
+  }
+
+  uint8_t EUSART::pop_rcreg() {
+    if (rcsta_reg_.oerr())
+      return 0;
+
+    auto v = rcreg_fifo_[rcreg_fifo_tail_];
+
+    if (++rcreg_fifo_tail_ >= rcreg_fifo_.size())
+      rcreg_fifo_tail_ = 0;
+
+    auto next = rcreg_fifo_[rcreg_fifo_tail_];
+    rcsta_reg_.set_rx9d((next & 0x100) != 0);
+    rcsta_reg_.set_ferr((next & 0x200) == 0);  // Inverted.
+    if (rcreg_fifo_tail_ == rcreg_fifo_head_)
+      rc_interrupt_.reset();
+
+    return v;
   }
 
   void EUSART::set_tx_pin(bool v) {

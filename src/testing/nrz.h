@@ -1,6 +1,9 @@
 #ifndef sim_testing_nrz_h
 #define sim_testing_nrz_h
 
+#include <string>
+#include <string_view>
+
 namespace sim::testing {
 
   /// A receiver for Non-Return-to-Zero data, such as that from UARTs.
@@ -53,6 +56,61 @@ namespace sim::testing {
     int bit_ = 0;
     uint16_t buf_ = 0;
     std::u16string data_;
+  };
+
+  /// A transmitter for Non-Return-to-Zero data, such as that to UARTs.
+  ///
+  /// It assumes one start bit and one stop bit. The unit of ticks is
+  /// unimportant, but must be consistent.
+  class NRZTransmitter {
+  public:
+    NRZTransmitter(int num_data_bits, unsigned long bit_ticks, std::u16string_view data)
+      : num_data_bits_(num_data_bits),
+        bit_ticks_(bit_ticks),
+        data_(data) {}
+
+    NRZTransmitter(NRZTransmitter&&) = default;
+    NRZTransmitter& operator =(NRZTransmitter&&) = default;
+
+    bool empty() const { return data_.empty() && bit_ == 0; }
+
+    /// Returns (next_tick, value), where the signal should be `value`
+    /// until `next_tick`. At `next_tick`, this function should be
+    /// called to figure out what to do. If `next_tick` is zero, the
+    /// transmitter is done.
+    std::pair<unsigned long, bool> next_signal_change() {
+      if (bit_ == 0) {
+        buf_ = data_[0];
+        data_.erase(0, 1);
+        buf_ <<= 1;
+        buf_ |= 1u << (1 + num_data_bits_);
+        tick_ = 0;
+      } else {
+        buf_ >>= 1;
+        tick_ += bit_ticks_;
+      }
+
+      ++bit_;
+
+      if (bit_ == 2 + num_data_bits_) {
+        bit_ = 0;
+        return {0, true};
+      }
+
+      return {
+        tick_ + bit_ticks_,
+        (buf_ & 1) != 0,
+      };
+    }
+
+  private:
+    const int num_data_bits_;
+    const unsigned long bit_ticks_;
+    std::u16string data_;
+
+    int bit_ = 0;
+    uint16_t buf_;
+    unsigned long tick_;
   };
 
 }  // namespace sim::testing

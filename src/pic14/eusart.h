@@ -56,8 +56,11 @@ namespace sim::pic14::internal {
     void write_masked(uint8_t v) { Base::template set_masked<WRITE_MASK>(v); }
 
     bool rx9d() const { return Base::template bit<RX9D>(); }
+    void set_rx9d(bool v) { Base::template set_bit<RX9D>(v); }
     bool oerr() const { return Base::template bit<OERR>(); }
-    bool frer() const { return Base::template bit<FERR>(); }
+    void set_oerr(bool v) { Base::template set_bit<OERR>(v); }
+    bool ferr() const { return Base::template bit<FERR>(); }
+    void set_ferr(bool v) { Base::template set_bit<FERR>(v); }
     bool adden() const { return Base::template bit<ADDEN>(); }
     bool cren() const { return Base::template bit<CREN>(); }
     bool sren() const { return Base::template bit<SREN>(); }
@@ -114,6 +117,9 @@ namespace sim::pic14::internal {
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
 
     private:
+      sim::core::TimePoint advance_rc();
+      sim::core::TimePoint advance_tx();
+
       void load_tsr();
 
     private:
@@ -122,6 +128,9 @@ namespace sim::pic14::internal {
       uint16_t tsr_;
       int tsr_bits_ = 0;
       bool tx_reg_valid_ = false;
+
+      uint16_t rsr_;
+      int rsr_bits_ = 0;
     };
 
     class SyncImpl {
@@ -147,7 +156,7 @@ namespace sim::pic14::internal {
     using SPBRGHReg = MultiRegisterBackend<EUSART, 0x9A>;
     using BaudCtlReg = BaudCtlRegBase<MultiRegisterBackend<EUSART, 0x187>>;
 
-    EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralEdgeSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt);
+    EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralLevelSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt);
 
     void reset();
 
@@ -173,12 +182,15 @@ namespace sim::pic14::internal {
     void update_impl();
     void update_bit_duration();
 
+    void push_rcreg(uint16_t v);
+    uint8_t pop_rcreg();
     void set_tx_pin(bool v);
 
   private:
     sim::core::DeviceListener *listener_;
-    sim::core::ClockModifierView fosc_;
-    InterruptMux::MaskablePeripheralEdgeSignal rc_interrupt_;
+    sim::core::ClockModifierView rc_fosc_;
+    sim::core::ClockModifierView tx_fosc_;
+    InterruptMux::MaskablePeripheralLevelSignal rc_interrupt_;
     InterruptMux::MaskablePeripheralLevelSignal tx_interrupt_;
 
     InputPin rc_pin_;
@@ -189,10 +201,13 @@ namespace sim::pic14::internal {
     RCStaRegBase<SingleRegisterBackend<uint8_t>> rcsta_reg_;
     TXStaRegBase<SingleRegisterBackend<uint8_t>> txsta_reg_;
     SingleRegisterBackend<uint8_t> tx_reg_;
-    SingleRegisterBackend<uint8_t> rc_reg_;
     SingleRegisterBackend<uint8_t> spbrg_reg_;
     SingleRegisterBackend<uint8_t> spbrgh_reg_;
     BaudCtlRegBase<SingleRegisterBackend<uint8_t>> baudctl_reg_;
+
+    std::array<uint16_t, 2> rcreg_fifo_;
+    std::size_t rcreg_fifo_head_ = 0;
+    std::size_t rcreg_fifo_tail_ = 0;
 
     sim::core::Clock::duration bit_duration_;
   };

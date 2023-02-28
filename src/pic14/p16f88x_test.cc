@@ -45,6 +45,58 @@ private:
   sim::core::Pin *pin_;
 };
 
+class NRZTransmitter : public sim::core::SimulationObject {
+public:
+  NRZTransmitter(const sim::core::SimulationClock *sim_clock, sim::core::Pin *pin)
+    : sim_clock_(sim_clock), pin_(pin) {
+    pin->set_external(true);
+  }
+
+  bool empty() const { return !tmtr_ || tmtr_->empty(); }
+
+  void transmit(std::u16string_view data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
+    if (tmtr_) std::abort();  // Already transmitting.
+
+    bit_duration_ = bit_duration;
+    delay_ = delay;
+    tmtr_.emplace(num_data_bits, 1, data);
+    schedule_immediately();
+  }
+
+  sim::core::Advancement advance_to(const sim::core::AdvancementLimit&) override {
+    if (!tmtr_) return {};
+
+    if (sim::core::is_never(tmtr_start_)) {
+      tmtr_start_ = sim_clock_->now() + delay_;
+      return { .next_time = tmtr_start_ };
+    }
+
+    auto [next_tick, v] = tmtr_->next_signal_change();
+    pin_->set_external(v);
+
+    if (tmtr_->empty()) {
+      tmtr_start_ = sim::core::SimulationClock::NEVER;
+      tmtr_.reset();
+    }
+
+    if (next_tick == 0)
+      return {};
+
+    return {
+      .next_time = tmtr_start_ + next_tick * bit_duration_,
+    };
+  }
+
+private:
+  const sim::core::SimulationClock *sim_clock_;
+  sim::core::Pin *pin_;
+
+  sim::core::Duration bit_duration_;
+  sim::core::Duration delay_;
+  sim::core::TimePoint tmtr_start_ = sim::core::SimulationClock::NEVER;
+  std::optional<sim::testing::NRZTransmitter> tmtr_;
+};
+
 class DeviceListener : public sim::core::DeviceListener {
 public:
   void pin_changed(sim::core::Pin *pin, PinChange change) override {
@@ -103,15 +155,23 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
 
 template<typename Proc>
 class ProcessorTestCase : public sim::testing::TestCase {
+  static std::unordered_map<std::string, sim::core::Pin*> build_pin_descrs(const std::vector<sim::core::PinDescriptor> &pins) {
+    std::unordered_map<std::string, sim::core::Pin*> descrs;
+    for (const auto &descr : pins) {
+      descrs[descr.name] = descr.pin;
+    }
+    return descrs;
+  }
+
 public:
   ProcessorTestCase(std::string_view firmware)
     : firmware_(firmware), fosc_(std::chrono::seconds(1)), proc(&listener_, &fosc_),
-      sim_(sim::core::SimulationContext({&fosc_}, {&proc}).make_simulator()) {
+      pins(build_pin_descrs(proc.pins())),
+      tmtr(&sim_clock(), pins["RC"]),
+      sim_(sim::core::SimulationContext({&fosc_}, {&proc, &tmtr}).make_simulator()) {
     listener_.sim_clock = &sim_.sim_clock();
-
     for (const auto &descr : proc.pins()) {
       listener_.pin_descrs[descr.pin] = descr;
-      pins[descr.name] = descr.pin;
     }
   }
 
@@ -168,6 +228,7 @@ private:
 protected:
   Proc proc;
   std::unordered_map<std::string, sim::core::Pin*> pins;
+  NRZTransmitter tmtr;
 
 private:
   sim::core::Simulator sim_;
@@ -286,6 +347,14 @@ PROCESSOR_TEST(EUSARTAsyncTransmitTest, P16F887, "testdata/eusart_async_tx.hex")
 
   if (rcvr.received().empty()) fail("No byte transmitted");
   if (rcvr.received()[0] != 42) fail("Byte transmitted should be 42");
+}
+
+PROCESSOR_TEST(EUSARTAsyncReceiveTest, P16F887, "testdata/eusart_async_rc.hex") {
+  tmtr.transmit(std::u16string{42}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
 }
 
 int main() {
