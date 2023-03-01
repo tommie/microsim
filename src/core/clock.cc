@@ -35,8 +35,13 @@ namespace sim::core {
   void ClockModifier::select(Clock *selected, int prescaler) {
     if (selected == &selected_.clock() && prescaler == prescaler_) return;
 
-    at_ += selected_.delta() / prescaler_;
-    adj_ += selected_.clock().at({}) - selected->at({});
+    if (prescaler_ > 0) {
+      at_ += selected_.delta() / prescaler_;
+      adj_ += selected_.clock().at({}) - selected->at({});
+    } else {
+      adj_ = Duration();
+    }
+
     selected_ = ClockView(selected);
     prescaler_ = prescaler;
 

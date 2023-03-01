@@ -104,6 +104,42 @@ namespace sim::core {
     if (mod.at(Clock::duration(1)) != TimePoint(Duration(80))) fail("mod.at(1) not 80 after select(c, 2)");
   }
 
+  SIM_TEST(ClockModifierZeroTest) {
+    Clock c(Duration(10));
+
+    int nchanges = 0;
+    ClockModifier mod([&nchanges]() { ++nchanges; }, &c);
+
+    c.advance_to(TimePoint(Duration(20)));
+
+    if (mod.now() != Clock::time_point(Clock::duration(2))) fail("mod.now() not 0");
+    if (mod.at(Clock::duration(0)) != TimePoint(Duration(20))) fail("mod.at(0) not 20");
+
+    mod.select(&c, 0);
+
+    if (nchanges != 1) fail("nchanges not 1 after select(c2)");
+
+    if (mod.interval() != Duration()) fail("mod.interval() not 0 after select(c2)");
+    if (mod.now() != Clock::time_point(Clock::duration(2))) fail("mod.now() not 2 after select(0)");
+    if (mod.at(Clock::duration(0)) != SimulationClock::NEVER) fail("mod.at(0) not NEVER after select(0)");
+    if (mod.at(Clock::duration(1)) != SimulationClock::NEVER) fail("mod.at(1) not NEVER after select(0)");
+
+    c.advance_to(TimePoint(Duration(50)));
+
+    if (mod.now() != Clock::time_point(Clock::duration(2))) fail("mod.now() not 2 after advance_to(50)");
+    if (mod.at(Clock::duration(0)) != SimulationClock::NEVER) fail("mod.at(0) not NEVER after advance_to(50)");
+
+    mod.select(&c, 1);
+
+    if (mod.now() != Clock::time_point(Clock::duration(2))) fail("mod.now() not 2 after select(1)");
+    if (mod.at(Clock::duration(0)) != TimePoint(Duration(50))) fail("mod.at(0) not 50 after select(1)");
+
+    c.advance_to(TimePoint(Duration(60)));
+
+    if (mod.now() != Clock::time_point(Clock::duration(3))) fail("mod.now() not 2 after advance_to(60)");
+    if (mod.at(Clock::duration(0)) != TimePoint(Duration(60))) fail("mod.at(0) not 60 after advance_to(60)");
+  }
+
 }  // namespace sim::core
 
 int main() {

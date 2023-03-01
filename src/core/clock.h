@@ -94,7 +94,7 @@ namespace sim::core {
   using ClockView = ClockViewBase<Clock>;
 
   /// A modifier that can switch between clocks and add dynamic
-  /// prescaling.
+  /// prescaling, including stopping the clock.
   class ClockModifier {
   public:
     using duration = Clock::duration;
@@ -109,11 +109,11 @@ namespace sim::core {
     const Clock& selected() const { return selected_.clock(); }
 
     Duration interval() const { return selected_.interval() * prescaler_; }
-    time_point now() const { return at_ + selected_.delta() / prescaler_; }
-    TimePoint at(duration d) const { return selected_.clock().at(d * prescaler_) + adj_; }
+    time_point now() const { return at_ + (prescaler_ > 0 ? selected_.delta() / prescaler_ : duration(0)); }
+    TimePoint at(duration d) const { return (prescaler_ > 0 ? selected_.clock().at(d * prescaler_) + adj_ : SimulationClock::NEVER); }
 
-    /// Selects a new clock and prescaler value. The prescaler must be
-    /// greater than zero.
+    /// Selects a new clock and prescaler value. If the prescaler is
+    /// zero, the output is stopped.
     void select(Clock *selected, int prescaler = 1);
 
   private:
