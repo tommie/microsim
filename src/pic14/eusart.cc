@@ -19,7 +19,13 @@ namespace sim::pic14::internal {
     if (!eusart_->rcsta_reg_.spen() || !eusart_->rcsta_reg_.cren())
       return;
 
-    if (eusart_->baudctl_reg_.abden()) {
+    if (eusart_->baudctl_reg_.wue()) {
+      if (!v) {
+        eusart_->push_rcreg(0);
+      } else {
+        eusart_->baudctl_reg_.set_wue(false);
+      }
+    } else if (eusart_->baudctl_reg_.abden()) {
       if (v) {
         if (rsr_bits_ == 0) {
           eusart_->rc_fosc_.reset();
@@ -81,7 +87,7 @@ namespace sim::pic14::internal {
     if (!eusart_->rcsta_reg_.cren())
       return sim::core::SimulationClock::NEVER;
 
-    if (eusart_->baudctl_reg_.abden())
+    if (eusart_->baudctl_reg_.abden() || eusart_->baudctl_reg_.wue())
       return sim::core::SimulationClock::NEVER;
 
     if (rsr_bits_ == 0) {

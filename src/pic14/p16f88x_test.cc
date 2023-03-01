@@ -365,6 +365,18 @@ PROCESSOR_TEST(EUSARTAutoBaudRateDetectTest, P16F887, "testdata/eusart_abd.hex")
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
 }
 
+PROCESSOR_TEST(EUSARTWakeUpTest, P16F887, "testdata/eusart_wakeup.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  tmtr.transmit(std::u16string{0}, 8, sim::core::Microseconds(16));
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
+}
+
 int main() {
   return sim::testing::TestSuite::global().run();
 }

@@ -33,6 +33,7 @@ namespace sim::pic14::internal {
     bool abden() const { return Base::template bit<ABDEN>(); }
     void set_abden(bool v) { Base::template set_bit<ABDEN>(v); }
     bool wue() const { return Base::template bit<WUE>(); }
+    void set_wue(bool v) { Base::template set_bit<WUE>(v); }
     bool brg16() const { return Base::template bit<BRG16>(); }
     bool sckp() const { return Base::template bit<SCKP>(); }
     bool rcidl() const { return Base::template bit<RCIDL>(); }
