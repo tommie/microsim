@@ -4,6 +4,7 @@
 #include "../core/clock.h"
 #include "../core/device.h"
 #include "../core/scheduler.h"
+#include "../core/signal.h"
 #include "data_bus.h"
 #include "interrupt.h"
 #include "nonvolatile.h"
@@ -87,7 +88,7 @@ namespace sim::pic14::internal {
 
     /// Constructs a new Executor with the given configuration for
     /// non-volatile memory, and data bus.
-    Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux);
+    Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, sim::core::Signal<bool>* sleep, std::function<void()> clear_wdt, InterruptMux *interrupt_mux);
 
     /// Executes the next instruction and returns the number of ticks
     /// it took.
@@ -95,10 +96,6 @@ namespace sim::pic14::internal {
 
     /// Resets the execution unit, including its register values.
     void reset();
-
-    /// Returns whether the execution unit is sleeping. It can only be
-    /// awaken by interrupts, or a reset.
-    bool is_sleeping() const { return in_sleep; }
 
     const DataBus& data_bus() const { return data_bus_; }
     DataBus& data_bus() { return data_bus_; }
@@ -142,6 +139,7 @@ namespace sim::pic14::internal {
     sim::core::ClockModifierView fosc_;
     NonVolatile *nv_;
     DataBus data_bus_;
+    sim::core::Signal<bool>* sleep_;
     std::function<void()> clear_wdt_;
     InterruptMux *interrupt_mux_;
 
@@ -150,7 +148,6 @@ namespace sim::pic14::internal {
     uint8_t w_reg_;
     StatusRegImpl status_reg_;
 
-    bool in_sleep;
     unsigned int inhibit_ = 0;
   };
 

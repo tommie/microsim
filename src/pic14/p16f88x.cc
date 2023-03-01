@@ -51,12 +51,14 @@ namespace sim::pic14::internal {
         adc_.fosc_changed();
       }),
       interrupt_mux_([this]() {
+        core_.sleep_signal()->set(false);
         executor_.interrupted();
       }),
       executor_(listener,
                 core_.fosc(),
                 &nv_,
                 build_data_bus(),
+                core_.sleep_signal(),
                 std::bind_front(&WatchDogTimer::clear, &wdt_),
                 &interrupt_mux_),
       wdt_(core_.lfintosc(),

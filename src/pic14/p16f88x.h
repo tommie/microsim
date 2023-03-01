@@ -51,7 +51,7 @@ namespace sim::pic14 {
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override;
 
       ICSP enter_icsp() { return core_.enter_icsp(); }
-      bool is_sleeping() const { return executor_.is_sleeping(); }
+      bool is_sleeping() const { return core_.is_sleeping(); }
       const std::vector<sim::core::PinDescriptor>& pins() const override { return pin_descrs_; }
 
     private:

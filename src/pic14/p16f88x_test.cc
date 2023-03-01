@@ -196,10 +196,6 @@ PROCESSOR_TEST(Timer0Test, P16F887, "testdata/timer0.hex") {
 PROCESSOR_TEST(Timer0InterruptTest, P16F887, "testdata/t0if.hex") {
   advance_until_sleep();
 
-  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
-
-  advance_until_sleep();
-
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1");
 }
 

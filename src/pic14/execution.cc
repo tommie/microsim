@@ -48,11 +48,12 @@ namespace sim::pic14::internal {
     }
   }
 
-  Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, std::function<void()> clear_wdt, InterruptMux *interrupt_mux)
+  Executor::Executor(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, NonVolatile *nv, DataBus &&data_bus, sim::core::Signal<bool>* sleep, std::function<void()> clear_wdt, InterruptMux *interrupt_mux)
     : listener_(listener),
       fosc_(fosc),
       nv_(nv),
       data_bus_(std::move(data_bus)),
+      sleep_(sleep),
       clear_wdt_(std::move(clear_wdt)),
       interrupt_mux_(interrupt_mux),
       status_reg_(SingleRegisterBackend<uint8_t>((1u << StatusReg::PD) | (1u << StatusReg::TO))) {}
@@ -64,7 +65,6 @@ namespace sim::pic14::internal {
     sp_reg_ = 0;
     w_reg_ = 0;
     fosc_.reset();
-    in_sleep = false;
     // Inhibits are cleared by the owning modules.
 
     schedule_immediately();
@@ -94,15 +94,11 @@ namespace sim::pic14::internal {
     }
 
     return {
-      .next_time = in_sleep || inhibit_ > 0 ? sim::core::SimulationClock::NEVER : fosc_.at(TICKS_PER_INSN),
+      .next_time = inhibit_ > 0 ? sim::core::SimulationClock::NEVER : fosc_.at(TICKS_PER_INSN),
     };
   }
 
   int Executor::execute() {
-    if (in_sleep) {
-      return 0;
-    }
-
     if (inhibit_ > 0) {
       return 0;
     }
@@ -145,8 +141,8 @@ namespace sim::pic14::internal {
           case 0x0063:
             // sleep: to, pd
             if (!interrupt_mux_->is_active()) {
-              in_sleep = true;
               status_reg_.set_reset((1 << StatusReg::PD));
+              sleep_->set(true);
             }
             break;
           }
@@ -427,9 +423,6 @@ namespace sim::pic14::internal {
       set_pc(4);
       intcon.set_gie(false);
     }
-
-    if (in_sleep) fosc_.reset();
-    in_sleep = false;
 
     schedule_immediately();
   }

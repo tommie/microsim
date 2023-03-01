@@ -188,6 +188,8 @@ namespace sim::pic14::internal {
     const Config1Reg& config1() const { return config1_; }
     const Config2Reg& config2() const { return config2_; }
 
+    bool is_sleeping() const { return sleep_.value(); }
+    sim::core::Signal<bool>* sleep_signal() { return &sleep_; }
     sim::core::Clock* lfintosc() { return &lfintosc_; }
     sim::core::ClockModifier* fosc() { return &fosc_; }
     std::vector<sim::core::Clock*> clock_sources() { return { &hfintosc_, &lfintosc_ }; }
@@ -213,15 +215,17 @@ namespace sim::pic14::internal {
   private:
     sim::core::Clock *extosc_;
     NonVolatile *nv_;
-    sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
     std::function<void()> option_updated_;
     std::function<void()> pcon_updated_;
 
+    sim::core::CombinedSignal<sim::core::CombineOr<bool>> reset_;
     sim::core::Signal<bool> *mclr_;
     InputPin mclr_pin_;
     sim::core::Signal<bool> *por_;
     sim::core::Signal<bool> *icsp_reset_;
     sim::core::Signal<bool> *wdt_reset_;
+
+    sim::core::Signal<bool> sleep_;
 
     sim::core::Clock hfintosc_;
     sim::core::Clock lfintosc_;

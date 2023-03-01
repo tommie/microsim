@@ -15,7 +15,9 @@
     bcf     INTCON, T0IF
     bsf     INTCON, T0IE
 
-    sleep
+loop:
+    btfss   INTCON, T0IF
+    goto    loop
 
     bcf     INTCON, T0IF
     banksel PORTA
