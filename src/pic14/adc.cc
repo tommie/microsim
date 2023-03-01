@@ -87,7 +87,7 @@ namespace sim::pic14::internal {
     }
 
     return {
-      .next_time = adcon0_reg_.adcs() == 3 ? frc_view_.at(end_tick) : frc_view_.at(end_tick),
+      .next_time = adcon0_reg_.adcs() == 3 ? frc_view_.at(end_tick) : fosc_.at(end_tick),
     };
   }
 
