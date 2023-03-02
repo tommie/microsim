@@ -5,6 +5,7 @@
 #include "../core/device.h"
 #include "../core/scheduler.h"
 #include "../core/signal.h"
+#include "../core/trace.h"
 #include "data_bus.h"
 #include "interrupt.h"
 #include "nonvolatile.h"
@@ -152,5 +153,22 @@ namespace sim::pic14::internal {
   };
 
 }  // namespace sim::pic14::internal
+
+namespace sim::pic14 {
+
+  class ExecutedTraceEntry : public sim::util::TraceEntryBase {
+  public:
+    static const sim::util::TraceEntryType<ExecutedTraceEntry> TYPE;
+
+    explicit ExecutedTraceEntry(uint16_t addr)
+      : addr_(addr) {}
+
+    uint16_t addr() const { return addr_; }
+
+  private:
+    uint16_t addr_;
+  };
+
+}  // namespace sim::pic14
 
 #endif  // sim_pic14_execution_h

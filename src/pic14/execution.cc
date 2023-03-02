@@ -5,6 +5,8 @@
 
 using sim::util::Status;
 
+REGISTER_TRACE_ENTRY_TYPE(ExecutedTraceEntry, sim::pic14::ExecutedTraceEntry)
+
 namespace sim::pic14::internal {
 
   inline void Executor::StatusRegImpl::update_add(uint8_t a, uint8_t b) {
@@ -405,6 +407,8 @@ namespace sim::pic14::internal {
       }
       break;
     }
+
+    sim::core::trace_writer().emplace<ExecutedTraceEntry>(pc);
 
     return get_pc() != pc + 1 ? 2 : 1;
   }

@@ -40,6 +40,7 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
                     sim::core::SimulationClockAdvancedTraceEntry,
                     sim::core::SimulatorTraceEntry,
                     sim::pic14::ADConversionDoneTraceEntry,
+                    sim::pic14::ExecutedTraceEntry,
                     sim::pic14::WatchDogClearedTraceEntry,
                     sim::pic14::WatchDogTimedOutTraceEntry,
                     sim::pic14::WroteEEDATATraceEntry,
@@ -55,6 +56,8 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
         std::cout << "Simulator   " << e.simulator() << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::ADConversionDoneTraceEntry>) {
         std::cout << "ADC Done" << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::ExecutedTraceEntry>) {
+        std::cout << "Executed    0x" << std::hex << e.addr() << std::dec << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogClearedTraceEntry>) {
         std::cout << "WDT Clear" << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogTimedOutTraceEntry>) {
