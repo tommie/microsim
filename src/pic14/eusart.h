@@ -127,14 +127,8 @@ namespace sim::pic14::internal {
       sim::core::TimePoint advance_rc();
       sim::core::TimePoint advance_tx();
 
-      void load_tsr();
-
     private:
       EUSART *eusart_;
-
-      uint16_t tsr_;
-      int tsr_bits_ = 0;
-      bool tx_reg_valid_ = false;
 
       uint16_t rsr_;
       int rsr_bits_ = 0;
@@ -191,6 +185,10 @@ namespace sim::pic14::internal {
 
     void push_rcreg(uint16_t v);
     uint8_t pop_rcreg();
+
+    bool tsr_empty() const { return tsr_bits_ == 0; }
+    void load_tsr();
+    void set_pin_from_tsr();
     void set_tx_pin(bool v);
 
   private:
@@ -217,6 +215,10 @@ namespace sim::pic14::internal {
     std::size_t rcreg_fifo_tail_ = 0;
 
     sim::core::Clock::duration bit_duration_;
+
+    uint16_t tsr_;
+    int tsr_bits_ = 0;
+    bool tx_reg_valid_ = false;
   };
 
 }  // namespace sim::pic14::internal

@@ -51,20 +51,6 @@ namespace sim::pic14::internal {
 
   void EUSART::AsyncImpl::write_register(uint16_t addr, uint8_t value) {
     switch (addr) {
-    case 0x19:  // TXREG
-      if (!eusart_->txsta_reg_.txen()) {
-        break;
-      }
-
-      if (tsr_bits_ == 0) {
-        load_tsr();
-        eusart_->schedule_immediately();
-      } else {
-        tx_reg_valid_ = true;
-        eusart_->tx_interrupt_.reset();
-      }
-      break;
-
     case 0x98:
       if (!eusart_->txsta_reg_.txen()) {
         eusart_->tx_interrupt_.reset();
@@ -132,43 +118,13 @@ namespace sim::pic14::internal {
     if (!eusart_->txsta_reg_.txen())
       return sim::core::SimulationClock::NEVER;
 
-    if (tsr_bits_ > 0 && eusart_->tx_fosc_.delta() >= eusart_->bit_duration_) {
-      eusart_->set_tx_pin((tsr_ & 1) != 0);
+    if (eusart_->tsr_empty())
+      return sim::core::SimulationClock::NEVER;
 
-      tsr_ >>= 1;
-      --tsr_bits_;
+    if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_)
+      eusart_->set_pin_from_tsr();
 
-      if (tsr_bits_ == 0) {
-        eusart_->txsta_reg_.update_tx_done();
-
-        if (tx_reg_valid_) {
-          load_tsr();
-        }
-      } else {
-        eusart_->tx_fosc_.reset();
-      }
-    }
-
-    return (tsr_bits_ > 0 ? eusart_->tx_fosc_.at(eusart_->bit_duration_) : sim::core::SimulationClock::NEVER);
-  }
-
-  void EUSART::AsyncImpl::load_tsr() {
-    if (eusart_->txsta_reg_.sendb()) {
-      tsr_ = 1;
-      tsr_bits_ = 14;
-    } else {
-      tsr_ = eusart_->tx_reg_.read() | (eusart_->txsta_reg_.tx9() ? (eusart_->txsta_reg_.tx9d() << 8) : 0);
-      tsr_ |= 1u << (eusart_->txsta_reg_.tx9() ? 9 : 8);
-      tsr_ <<= 1;
-      tsr_bits_ = (eusart_->txsta_reg_.tx9() ? 11 : 10);
-    }
-
-    eusart_->txsta_reg_.set_trmt(false);
-
-    tx_reg_valid_ = false;
-    eusart_->tx_interrupt_.raise();
-
-    eusart_->tx_fosc_.reset();
+    return eusart_->tx_fosc_.at(eusart_->bit_duration_);
   }
 
   EUSART::SyncImpl::SyncImpl(EUSART *eusart)
@@ -217,6 +173,9 @@ namespace sim::pic14::internal {
     rcreg_fifo_head_ = 0;
     rcreg_fifo_tail_ = 0;
 
+    tsr_bits_ = 0;
+    tx_reg_valid_ = false;
+
     update_impl();
     update_bit_duration();
   }
@@ -246,6 +205,16 @@ namespace sim::pic14::internal {
 
     case 0x19:
       tx_reg_.write(value);
+
+      if (txsta_reg_.txen()) {
+        if (tsr_empty()) {
+          load_tsr();
+          schedule_immediately();
+        } else {
+          tx_reg_valid_ = true;
+          tx_interrupt_.reset();
+        }
+      }
       break;
 
     case 0x1A:
@@ -290,6 +259,9 @@ namespace sim::pic14::internal {
     } else if (!std::holds_alternative<ResetImpl>(impl_)) {
       impl_.emplace<ResetImpl>();
       tx_interrupt_.reset();
+      rc_interrupt_.reset();
+      tsr_bits_ = 0;
+      tx_reg_valid_ = false;
     }
   }
 
@@ -359,12 +331,50 @@ namespace sim::pic14::internal {
     return v;
   }
 
+  void EUSART::load_tsr() {
+    if (txsta_reg_.sendb()) {
+      tsr_ = 1;
+      tsr_bits_ = 14;
+    } else {
+      tsr_ = tx_reg_.read() | (txsta_reg_.tx9() ? (txsta_reg_.tx9d() << 8) : 0);
+      tsr_ |= 1u << (txsta_reg_.tx9() ? 9 : 8);
+      tsr_ <<= 1;
+      tsr_bits_ = (txsta_reg_.tx9() ? 11 : 10);
+    }
+
+    txsta_reg_.set_trmt(false);
+
+    tx_reg_valid_ = false;
+    tx_interrupt_.raise();
+
+    tx_fosc_.reset();
+  }
+
+  void EUSART::set_pin_from_tsr() {
+    set_tx_pin((tsr_ & 1) != 0);
+
+    tsr_ >>= 1;
+    --tsr_bits_;
+
+    if (tsr_empty()) {
+      if (tx_reg_valid_) {
+        load_tsr();
+      } else {
+        txsta_reg_.update_tx_done();
+      }
+    } else {
+      tx_fosc_.reset();
+    }
+  }
+
   void EUSART::set_tx_pin(bool v) {
-    if ((tx_pin_.value() >= 0.5) == v)
+    auto *pin = &tx_pin_;
+
+    if ((pin->value() >= 0.5) == v)
       return;
 
-    tx_pin_.set_value(v);
-    listener_->pin_changed(&tx_pin_, sim::core::DeviceListener::VALUE);
+    pin->set_value(v);
+    listener_->pin_changed(pin, sim::core::DeviceListener::VALUE);
   }
 
 }  // namespace sim::pic14::internal
