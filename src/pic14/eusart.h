@@ -110,15 +110,17 @@ namespace sim::pic14::internal {
   class EUSART : public RegisterBackend, public sim::core::Schedulable {
     class ResetImpl {
     public:
-      void rc_pin_changed(bool v);
-      void write_register(uint16_t addr, uint8_t value);
-      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
+      void ck_pin_changed(bool v) {}
+      void rc_pin_changed(bool v) {}
+      void write_register(uint16_t addr, uint8_t value) {}
+      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) { return {}; }
     };
 
     class AsyncImpl {
     public:
       explicit AsyncImpl(EUSART *eusart);
 
+      void ck_pin_changed(bool v) {}
       void rc_pin_changed(bool v);
       void write_register(uint16_t addr, uint8_t value);
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
@@ -134,11 +136,25 @@ namespace sim::pic14::internal {
       int rsr_bits_ = 0;
     };
 
-    class SyncImpl {
+    class SyncMasterImpl {
     public:
-      explicit SyncImpl(EUSART *eusart);
+      explicit SyncMasterImpl(EUSART *eusart);
 
-      void rc_pin_changed(bool v);
+      void ck_pin_changed(bool v) {}
+      void rc_pin_changed(bool v) {}
+      void write_register(uint16_t addr, uint8_t value);
+      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
+
+    private:
+      EUSART *eusart_;
+    };
+
+    class SyncSlaveImpl {
+    public:
+      explicit SyncSlaveImpl(EUSART *eusart);
+
+      void ck_pin_changed(bool v);
+      void rc_pin_changed(bool v) {}
       void write_register(uint16_t addr, uint8_t value);
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
 
@@ -171,6 +187,8 @@ namespace sim::pic14::internal {
 
     InputPin& rc_pin() { return rc_pin_; }
     OutputPin& tx_pin() { return tx_pin_; }
+    BiDiPin& ck_pin() { return ck_pin_; }
+    BiDiPin& dt_pin() { return dt_pin_; }
 
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;
@@ -190,6 +208,8 @@ namespace sim::pic14::internal {
     void load_tsr();
     void set_pin_from_tsr();
     void set_tx_pin(bool v);
+    void set_pin_value(OutputPin *pin, bool v);
+    void set_pin_input(BiDiPin *pin, bool v);
 
   private:
     sim::core::DeviceListener *listener_;
@@ -200,8 +220,10 @@ namespace sim::pic14::internal {
 
     InputPin rc_pin_;
     OutputPin tx_pin_;
+    BiDiPin ck_pin_;
+    BiDiPin dt_pin_;
 
-    std::variant<ResetImpl, AsyncImpl, SyncImpl> impl_;
+    std::variant<ResetImpl, AsyncImpl, SyncMasterImpl, SyncSlaveImpl> impl_;
 
     RCStaRegBase<SingleRegisterBackend<uint8_t>> rcsta_reg_;
     TXStaRegBase<SingleRegisterBackend<uint8_t>> txsta_reg_;

@@ -2,14 +2,6 @@
 
 namespace sim::pic14::internal {
 
-  void EUSART::ResetImpl::rc_pin_changed(bool v) {}
-
-  void EUSART::ResetImpl::write_register(uint16_t addr, uint8_t value) {}
-
-  sim::core::Advancement EUSART::ResetImpl::advance_to(const sim::core::AdvancementLimit &limit) {
-    return {};
-  }
-
   EUSART::AsyncImpl::AsyncImpl(EUSART *eusart)
     : eusart_(eusart) {
     eusart->set_tx_pin(true);
@@ -127,17 +119,61 @@ namespace sim::pic14::internal {
     return eusart_->tx_fosc_.at(eusart_->bit_duration_);
   }
 
-  EUSART::SyncImpl::SyncImpl(EUSART *eusart)
-    : eusart_(eusart) {}
-
-  void EUSART::SyncImpl::rc_pin_changed(bool v) {
+  EUSART::SyncMasterImpl::SyncMasterImpl(EUSART *eusart)
+    : eusart_(eusart) {
+    eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
+    eusart_->set_pin_value(&eusart_->dt_pin_, false);
+    eusart_->set_pin_input(&eusart_->ck_pin_, false);
+    eusart_->set_pin_input(&eusart_->dt_pin_, false);
   }
 
-  void EUSART::SyncImpl::write_register(uint16_t addr, uint8_t value) {
+  void EUSART::SyncMasterImpl::write_register(uint16_t addr, uint8_t value) {
+    switch (addr) {
+    case 0x98:
+      if (!eusart_->txsta_reg_.txen()) {
+        eusart_->tx_interrupt_.reset();
+        eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
+        eusart_->set_pin_value(&eusart_->dt_pin_, false);
+      }
+      break;
+    }
   }
 
-  sim::core::Advancement EUSART::SyncImpl::advance_to(const sim::core::AdvancementLimit &limit) {
-    return {};
+  sim::core::Advancement EUSART::SyncMasterImpl::advance_to(const sim::core::AdvancementLimit &limit) {
+    if (!eusart_->txsta_reg_.txen())
+      return { .next_time = sim::core::SimulationClock::NEVER };
+
+    if (eusart_->tsr_empty())
+      return { .next_time = sim::core::SimulationClock::NEVER };
+
+    if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_) {
+      eusart_->set_pin_from_tsr();
+      eusart_->set_pin_value(&eusart_->ck_pin_, !eusart_->baudctl_reg_.sckp());
+    } else if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_ / 2) {
+      // We don't reset tx_fosc_, so this may be called multiple times
+      // per bit.
+      eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
+
+      return { .next_time = eusart_->tx_fosc_.at(eusart_->bit_duration_) };
+    }
+
+    return { .next_time = eusart_->tx_fosc_.at((eusart_->bit_duration_ + sim::core::Clock::duration(1)) / 2) };
+  }
+
+  EUSART::SyncSlaveImpl::SyncSlaveImpl(EUSART *eusart)
+    : eusart_(eusart) {
+    eusart_->set_pin_input(&eusart_->ck_pin_, true);
+    eusart_->set_pin_input(&eusart_->dt_pin_, true);
+  }
+
+  void EUSART::SyncSlaveImpl::ck_pin_changed(bool v) {
+  }
+
+  void EUSART::SyncSlaveImpl::write_register(uint16_t addr, uint8_t value) {
+  }
+
+  sim::core::Advancement EUSART::SyncSlaveImpl::advance_to(const sim::core::AdvancementLimit &limit) {
+    return { .next_time = sim::core::SimulationClock::NEVER };
   }
 
   EUSART::EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralLevelSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt)
@@ -150,6 +186,10 @@ namespace sim::pic14::internal {
         std::visit([this, v](auto &impl) { impl.rc_pin_changed(v); }, impl_);
       }),
       tx_pin_(true),
+      ck_pin_([this](bool v) {
+        std::visit([this, v](auto &impl) { impl.ck_pin_changed(v); }, impl_);
+      }),
+      dt_pin_([](bool v) {}),
       impl_(AsyncImpl(this)),
       rcsta_reg_(SingleRegisterBackend<uint8_t>(0)),
       txsta_reg_(SingleRegisterBackend<uint8_t>(0)),
@@ -159,7 +199,9 @@ namespace sim::pic14::internal {
       baudctl_reg_(SingleRegisterBackend<uint8_t>(0)) {}
 
   void EUSART::reset() {
-    tx_pin_.set_value(true);
+    set_pin_value(&tx_pin_, true);
+    set_pin_input(&ck_pin_, true);
+    set_pin_input(&dt_pin_, true);
 
     tx_interrupt_.reset();
     rc_interrupt_.reset();
@@ -257,10 +299,14 @@ namespace sim::pic14::internal {
 
   void EUSART::update_impl() {
     if (rcsta_reg_.spen()) {
-      if (txsta_reg_.sync() && !std::holds_alternative<SyncImpl>(impl_))
-        impl_.emplace<SyncImpl>(this);
-      else if (!txsta_reg_.sync() && !std::holds_alternative<AsyncImpl>(impl_))
+      if (txsta_reg_.sync()) {
+        if (txsta_reg_.csrc() && !std::holds_alternative<SyncMasterImpl>(impl_))
+          impl_.emplace<SyncMasterImpl>(this);
+        else if (!txsta_reg_.csrc() && !std::holds_alternative<SyncSlaveImpl>(impl_))
+          impl_.emplace<SyncSlaveImpl>(this);
+      } else if (!std::holds_alternative<AsyncImpl>(impl_)) {
         impl_.emplace<AsyncImpl>(this);
+      }
     } else if (!std::holds_alternative<ResetImpl>(impl_)) {
       impl_.emplace<ResetImpl>();
       tx_interrupt_.reset();
@@ -342,6 +388,9 @@ namespace sim::pic14::internal {
       tsr_bits_ = 14;
     } else {
       tsr_ = tx_reg_.read() | (txsta_reg_.tx9() ? (txsta_reg_.tx9d() << 8) : 0);
+      if (!txsta_reg_.sync() && baudctl_reg_.sckp())
+        tsr_ ^= 0xFF;
+
       tsr_ |= 1u << (txsta_reg_.tx9() ? 9 : 8);
       tsr_ <<= 1;
       tsr_bits_ = (txsta_reg_.tx9() ? 11 : 10);
@@ -373,13 +422,23 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::set_tx_pin(bool v) {
-    auto *pin = &tx_pin_;
+    set_pin_value(txsta_reg_.sync() ? &dt_pin_ : &tx_pin_, v);
+  }
 
+  void EUSART::set_pin_value(OutputPin *pin, bool v) {
     if ((pin->value() >= 0.5) == v)
       return;
 
     pin->set_value(v);
     listener_->pin_changed(pin, sim::core::DeviceListener::VALUE);
+  }
+
+  void EUSART::set_pin_input(BiDiPin *pin, bool v) {
+    if (pin->input() == v)
+      return;
+
+    pin->set_input(v);
+    listener_->pin_changed(pin, sim::core::DeviceListener::RESISTANCE);
   }
 
 }  // namespace sim::pic14::internal

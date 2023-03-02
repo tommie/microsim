@@ -150,6 +150,8 @@ namespace sim::pic14::internal {
 
     descrs.push_back({.pin = &eusart_.rc_pin(), .name = "RC"});
     descrs.push_back({.pin = &eusart_.tx_pin(), .name = "TX"});
+    descrs.push_back({.pin = &eusart_.ck_pin(), .name = "CK"});
+    descrs.push_back({.pin = &eusart_.dt_pin(), .name = "DT"});
 
     return descrs;
   }

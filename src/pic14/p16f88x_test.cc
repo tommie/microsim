@@ -9,6 +9,7 @@
 #include "../core/ihex.h"
 #include "../core/trace.h"
 #include "../testing/nrz.h"
+#include "../testing/spi.h"
 #include "../testing/testing.h"
 #include "../util/status.h"
 #include "p16f88x.h"
@@ -97,18 +98,44 @@ private:
   std::optional<sim::testing::NRZTransmitter> tmtr_;
 };
 
+class SPISlave {
+public:
+  SPISlave(sim::core::Pin *ck_pin, sim::core::Pin *dt_pin, unsigned int num_data_bits, std::u16string_view data = {})
+    : spi_(num_data_bits, data),
+      ck_pin_(ck_pin), dt_pin_(dt_pin) {}
+
+  std::u16string_view data() const { return spi_.data(); }
+
+  void pin_changed(sim::core::Pin *pin) {
+    if (pin != ck_pin_ && pin != dt_pin_) return;
+
+    double dt = spi_.signal_changed(ck_pin_->resistance() >= 0.5 ? 0.5 : ck_pin_->value(),
+                                   dt_pin_->resistance() >= 0.5 ? 0.5 : dt_pin_->value());
+    if (dt < 0.4 || dt >= 0.6) {
+      dt_pin_->set_external(dt);
+    }
+  }
+
+private:
+  sim::testing::SPISlave spi_;
+  sim::core::Pin *ck_pin_;
+  sim::core::Pin *dt_pin_;
+};
+
 class DeviceListener : public sim::core::DeviceListener {
 public:
   void pin_changed(sim::core::Pin *pin, PinChange change) override {
     std::cout << "  " << std::setw(6) << sim_clock->now().time_since_epoch().count() << " pin_changed " << pin_descrs[pin].name << " " << (change == PinChange::VALUE ? "value" : "res") << " " << pin->value() << ":" << (pin->resistance() < 0.5 ? "o" : "i") << std::endl;
 
     if (nrz_rcvr_) nrz_rcvr_->pin_changed(pin);
+    if (spi_slave_) spi_slave_->pin_changed(pin);
   }
 
   std::unordered_map<sim::core::Pin*, sim::core::PinDescriptor> pin_descrs;
   const sim::core::SimulationClock *sim_clock;
 
   NRZReceiver *nrz_rcvr_ = nullptr;
+  SPISlave *spi_slave_ = nullptr;
 };
 
 void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) {
@@ -211,6 +238,10 @@ protected:
 
   void set_nrz_receiver(NRZReceiver *rcvr) {
     listener_.nrz_rcvr_ = rcvr;
+  }
+
+  void set_spi_slave(SPISlave *slave) {
+    listener_.spi_slave_ = slave;
   }
 
   sim::util::Status setUp() override {
@@ -375,6 +406,18 @@ PROCESSOR_TEST(EUSARTWakeUpTest, P16F887, "testdata/eusart_wakeup.hex") {
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
+}
+
+PROCESSOR_TEST(EUSARTMasterTransmitTest, P16F887, "testdata/eusart_master_tx.hex") {
+  SPISlave spi(pins["CK"], pins["DT"], 8);
+  set_spi_slave(&spi);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
+
+  if (spi.data().empty()) fail("No byte transmitted");
+  if (spi.data()[0] != 42) fail("Byte transmitted should be 42");
 }
 
 int main() {

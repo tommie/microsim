@@ -6,10 +6,10 @@
 namespace sim::pic14 {
 
   /// A simple digital input pin.
-  class InputPin : public sim::core::Pin {
+  class InputPin : public virtual sim::core::Pin {
   public:
     explicit InputPin(std::function<void(bool)> changed)
-      : changed_(changed) {}
+      : changed_(std::move(changed)) {}
 
     double value() const override { return value_ ? 1 : 0; }
     double resistance() const override { return 1; }
@@ -31,7 +31,7 @@ namespace sim::pic14 {
   };
 
   /// A simple digital output pin.
-  class OutputPin : public sim::core::Pin {
+  class OutputPin : public virtual sim::core::Pin {
   public:
     explicit OutputPin(bool value = false)
       : value_(value) {}
@@ -45,6 +45,25 @@ namespace sim::pic14 {
 
   private:
     bool value_;
+  };
+
+  /// A pin that can switch between being a digital input and output.
+  class BiDiPin : public virtual InputPin, public virtual OutputPin {
+  public:
+    BiDiPin(std::function<void(bool)> changed, bool input = true, bool value = false)
+      : InputPin(std::move(changed)),
+        OutputPin(value),
+        input_(input) {}
+
+    double value() const override { return OutputPin::value(); }
+    double resistance() const override { return input_ ? InputPin::resistance() : OutputPin::resistance(); }
+    void set_external(double v) override { InputPin::set_external(v); }
+
+    bool input() const { return input_; }
+    void set_input(bool v) { input_ = v; }
+
+  private:
+    bool input_;
   };
 
 }  // namespace sim::pic14
