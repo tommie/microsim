@@ -16,6 +16,8 @@
     movlw   42
     movwf   EEDAT
 
+    banksel INTCON
+    bsf     INTCON, PEIE
     banksel PIR2
     bcf     PIR2, EEIF
     banksel PIE2

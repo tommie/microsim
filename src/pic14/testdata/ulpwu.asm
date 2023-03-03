@@ -8,6 +8,8 @@
     banksel TRISA
     movwf   TRISA
 
+    banksel INTCON
+    bsf     INTCON, PEIE
     banksel PCON
     bsf     PCON, ULPWUE
     banksel PIR2

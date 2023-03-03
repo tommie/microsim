@@ -37,8 +37,10 @@ namespace sim::pic14::internal {
       if (intcon_.any_flag_set(1u << en_bit)) return true;
     }
 
-    for (size_t i = 0; i < pie_.size(); ++i) {
-      if (pir_[i] & pie_[i]) return true;
+    if (intcon_.peie()) {
+      for (size_t i = 0; i < pie_.size(); ++i) {
+        if (pir_[i] & pie_[i]) return true;
+      }
     }
 
     return false;

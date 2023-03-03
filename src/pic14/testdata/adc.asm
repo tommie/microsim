@@ -13,6 +13,8 @@
 
     ;; Sampling delay not simulated.
 
+    banksel INTCON
+    bsf     INTCON, PEIE
     banksel PIR1
     bcf     PIR1, ADIF
     banksel PIE1
