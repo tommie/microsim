@@ -420,6 +420,15 @@ PROCESSOR_TEST(EUSARTMasterTransmitTest, P16F887, "testdata/eusart_master_tx.hex
   if (spi.data()[0] != 42) fail("Byte transmitted should be 42");
 }
 
+PROCESSOR_TEST(EUSARTMasterReceiveTest, P16F887, "testdata/eusart_master_rc.hex") {
+  SPISlave spi(pins["CK"], pins["DT"], 8, std::u16string{42});
+  set_spi_slave(&spi);
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after receive");
+}
+
 int main() {
   return sim::testing::TestSuite::global().run();
 }

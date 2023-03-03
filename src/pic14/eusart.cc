@@ -124,7 +124,7 @@ namespace sim::pic14::internal {
     eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
     eusart_->set_pin_value(&eusart_->dt_pin_, false);
     eusart_->set_pin_input(&eusart_->ck_pin_, false);
-    eusart_->set_pin_input(&eusart_->dt_pin_, false);
+    eusart_->set_pin_input(&eusart_->dt_pin_, !eusart_->txsta_reg_.txen());
   }
 
   void EUSART::SyncMasterImpl::write_register(uint16_t addr, uint8_t value) {
@@ -133,16 +133,69 @@ namespace sim::pic14::internal {
       if (!eusart_->txsta_reg_.txen()) {
         eusart_->tx_interrupt_.reset();
         eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
-        eusart_->set_pin_value(&eusart_->dt_pin_, false);
+      }
+      eusart_->set_pin_input(&eusart_->dt_pin_, !eusart_->txsta_reg_.txen());
+      // The SYNC bit may have changed, so we also need to configure
+      // what RCSTA says.
+
+      // fall through
+
+    case 0x18:
+      if (eusart_->rcsta_reg_.cren() || eusart_->rcsta_reg_.sren()) {
+        eusart_->schedule_immediately();
+      } else {
+        eusart_->tx_interrupt_.reset();
       }
       break;
     }
   }
 
   sim::core::Advancement EUSART::SyncMasterImpl::advance_to(const sim::core::AdvancementLimit &limit) {
-    if (!eusart_->txsta_reg_.txen())
+    if (eusart_->rcsta_reg_.cren() || eusart_->rcsta_reg_.sren())
+      return advance_rc();
+    else if (eusart_->txsta_reg_.txen())
+      return advance_tx();
+    else
       return { .next_time = sim::core::SimulationClock::NEVER };
+  }
 
+  sim::core::Advancement EUSART::SyncMasterImpl::advance_rc() {
+    if (eusart_->rc_fosc_.delta() >= eusart_->bit_duration_ / 2) {
+      if (rsr_half_bits_ % 2 == 0) {
+        // Clock up: Data pin changes.
+        eusart_->set_pin_value(&eusart_->ck_pin_, !eusart_->baudctl_reg_.sckp());
+        ++rsr_half_bits_;
+      } else {
+        // Clock down: Data pin sampling.
+        eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
+
+        rsr_ >>= 1;
+        rsr_ |= (eusart_->dt_pin_.external() ? 0x100u : 0u);
+        ++rsr_half_bits_;
+
+        if (rsr_half_bits_ == (eusart_->rcsta_reg_.rx9() ? 2 * 9 : 2 * 8)) {
+          if (!eusart_->rcsta_reg_.rx9()) {
+            rsr_ >>= 9 - 8;
+          }
+
+          eusart_->push_rcreg(rsr_);
+          rsr_half_bits_ = 0;
+          rsr_ = 0;
+
+          if (eusart_->rcsta_reg_.sren()) {
+            eusart_->rcsta_reg_.set_sren(false);
+            return { .next_time = sim::core::SimulationClock::NEVER };
+          }
+        }
+      }
+
+      eusart_->rc_fosc_.reset();
+    }
+
+    return { .next_time = eusart_->rc_fosc_.at((eusart_->bit_duration_ + sim::core::Clock::duration(1)) / 2) };
+  }
+
+  sim::core::Advancement EUSART::SyncMasterImpl::advance_tx() {
     if (eusart_->tsr_empty())
       return { .next_time = sim::core::SimulationClock::NEVER };
 

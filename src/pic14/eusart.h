@@ -71,6 +71,7 @@ namespace sim::pic14::internal {
     bool adden() const { return Base::template bit<ADDEN>(); }
     bool cren() const { return Base::template bit<CREN>(); }
     bool sren() const { return Base::template bit<SREN>(); }
+    void set_sren(bool v) { Base::template set_bit<SREN>(v); }
     bool rx9() const { return Base::template bit<RX9>(); }
     bool spen() const { return Base::template bit<SPEN>(); }
 
@@ -146,7 +147,14 @@ namespace sim::pic14::internal {
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
 
     private:
+      sim::core::Advancement advance_rc();
+      sim::core::Advancement advance_tx();
+
+    private:
       EUSART *eusart_;
+
+      uint16_t rsr_ = 0;
+      int rsr_half_bits_ = 0;
     };
 
     class SyncSlaveImpl {
