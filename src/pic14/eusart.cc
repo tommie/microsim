@@ -206,14 +206,16 @@ namespace sim::pic14::internal {
     case 0x19:
       tx_reg_.write(value);
 
-      if (txsta_reg_.txen()) {
-        if (tsr_empty()) {
-          load_tsr();
+      // Based on SYNC Tx, the TSR can be loaded even when TXEN is
+      // off, and later the transmission can be started by setting
+      // TXEN.
+      if (tsr_empty()) {
+        load_tsr();
+        if (txsta_reg_.txen())
           schedule_immediately();
-        } else {
-          tx_reg_valid_ = true;
-          tx_interrupt_.reset();
-        }
+      } else {
+        tx_reg_valid_ = true;
+        tx_interrupt_.reset();
       }
       break;
 
@@ -225,6 +227,9 @@ namespace sim::pic14::internal {
       txsta_reg_.write_masked(value);
       update_impl();
       update_bit_duration();
+
+      if (txsta_reg_.txen())
+        schedule_immediately();
       break;
 
     case 0x99:
