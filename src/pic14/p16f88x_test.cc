@@ -110,7 +110,7 @@ public:
     if (pin != ck_pin_ && pin != dt_pin_) return;
 
     double dt = spi_.signal_changed(ck_pin_->resistance() >= 0.5 ? 0.5 : ck_pin_->value(),
-                                   dt_pin_->resistance() >= 0.5 ? 0.5 : dt_pin_->value());
+                                    dt_pin_->resistance() >= 0.5 ? 0.5 : dt_pin_->value());
     if (dt < 0.4 || dt >= 0.6) {
       dt_pin_->set_external(dt);
     }
@@ -209,28 +209,33 @@ protected:
     if (proc.is_sleeping())
       advance_during_sleep();
 
-    sim::core::AdvancementLimit limit = {
-      .can_advance_to = [this](sim::core::TimePoint) {
+    advance_while([this]() {
         return !proc.is_sleeping();
-      },
-    };
-
-    do {
-      sim_.advance_to(limit);
-      dump_trace_buffer();
-    } while (!proc.is_sleeping());
+    });
   }
 
   void advance_during_sleep() {
-    sim::core::AdvancementLimit limit = {
-      .can_advance_to = [this](sim::core::TimePoint) {
+    advance_while([this]() {
         return proc.is_sleeping();
+    });
+  }
+
+  void advance_while(std::function<bool()> pred) {
+    sim::core::AdvancementLimit limit = {
+      .can_advance_to = [&pred](sim::core::TimePoint) {
+        return pred();
       },
     };
 
-    while (proc.is_sleeping()) {
-      if (sim::core::is_never(sim_.advance_to(limit).next_time))
+    while (pred()) {
+      if (sim::core::is_never(sim_.advance_to(limit).next_time)) {
+        if (!pred()) {
+          return;
+        }
+
+        std::cerr << "The simulation is stalled and cannot advance." << std::endl;
         std::abort();
+      }
 
       dump_trace_buffer();
     }
