@@ -93,31 +93,31 @@ namespace sim::pic14::internal {
   }
 
   uint8_t Core::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x81: return option_reg_.read();
-    case 0x8E: return pcon_reg_.read();
-    case 0x8F: return osccon_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::OPTION: return option_reg_.read();
+    case Register::PCON: return pcon_reg_.read();
+    case Register::OSCCON: return osccon_reg_.read();
+    default: std::abort();
     }
   }
 
   void Core::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x81:
+    switch (static_cast<Register>(addr)) {
+    case Register::OPTION:
       if (value != option_reg_.read()) {
         option_reg_.write(value);
         option_updated_();
       }
       break;
 
-    case 0x8E:
+    case Register::PCON:
       if (value != pcon_reg_.read()) {
         pcon_reg_.write_masked(value);
         pcon_updated_();
       }
       break;
 
-    case 0x8F:
+    case Register::OSCCON:
       osccon_reg_.write_masked(value);
       update_system_clock();
       break;

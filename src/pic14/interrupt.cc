@@ -72,25 +72,32 @@ namespace sim::pic14::internal {
   }
 
   uint8_t InterruptMux::read_register(uint16_t addr) {
-    if (addr == 0x0B) {
-      return intcon_.read();
-    } else if (addr >= 0x0C && addr < 0x0C + pir_.size()) {
-      return pir_[addr - 0x0C];
-    } else if (addr >= 0x8C && addr < 0x8C + pie_.size()) {
-      return pie_[addr - 0x8C];
-    } else {
-      std::abort();
+    switch (static_cast<Register>(addr)) {
+    case Register::INTCON: return intcon_.read();
+    case Register::PIR1:
+    case Register::PIR2: return pir_[addr - static_cast<uint16_t>(Register::PIR1)];
+    case Register::PIE1:
+    case Register::PIE2: return pie_[addr - static_cast<uint16_t>(Register::PIE1)];
+    default: std::abort();
     }
   }
 
   void InterruptMux::write_register(uint16_t addr, uint8_t value) {
-    if (addr == 0x0B) {
+    switch (static_cast<Register>(addr)) {
+    case Register::INTCON:
       intcon_.write(value);
-    } else if (addr >= 0x0C && addr < 0x0C + pir_.size()) {
-      uint8_t ro_mask = pir_ro_mask_[addr - 0x0C];
-      pir_[addr - 0x0C] = (pir_[addr - 0x0C] & ro_mask) | (value & ~ro_mask);
-    } else if (addr >= 0x8C && addr < 0x8C + pie_.size()) {
-      pie_[addr - 0x8C] = value;
+      break;
+
+    case Register::PIR1:
+    case Register::PIR2: {
+      uint8_t ro_mask = pir_ro_mask_[addr - static_cast<uint16_t>(Register::PIR1)];
+      pir_[addr - static_cast<uint16_t>(Register::PIR1)] = (pir_[addr - static_cast<uint16_t>(Register::PIR1)] & ro_mask) | (value & ~ro_mask);
+      break;
+    }
+    case Register::PIE1:
+    case Register::PIE2:
+      pie_[addr - static_cast<uint16_t>(Register::PIE1)] = value;
+      break;
     }
   }
 

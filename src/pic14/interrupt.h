@@ -42,10 +42,18 @@ namespace sim::pic14::internal {
     using IntConRegImpl = IntConRegBase<SingleRegisterBackend<uint8_t>>;
 
   public:
+    enum class Register : uint16_t {
+      INTCON,
+      PIR1,
+      PIR2,
+      PIE1,
+      PIE2,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
     using InterruptSignal = std::function<void()>;
-    using IntConReg = IntConRegBase<MultiRegisterBackend<InterruptMux, 0x0B>>;
+    using IntConReg = IntConRegBase<MultiRegisterBackend<InterruptMux, Register::INTCON>>;
 
     class MaskableIntconEdgeSignal {
     public:
@@ -133,7 +141,7 @@ namespace sim::pic14::internal {
     /// Performs a device reset on the interrupt mux.
     void reset();
 
-    IntConReg intcon_reg() { return IntConReg(MultiRegisterBackend<InterruptMux, 0x0B>(this)); }
+    IntConReg intcon_reg() { return IntConReg(MultiRegisterBackend<InterruptMux, Register::INTCON>(this)); }
 
     uint8_t read_register(uint16_t addr) override;
     void write_register(uint16_t addr, uint8_t value) override;

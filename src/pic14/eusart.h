@@ -174,27 +174,37 @@ namespace sim::pic14::internal {
     };
 
   public:
+    enum class Register : uint16_t {
+      RCSTA,
+      TXREG,
+      RCREG,
+      TXSTA,
+      SPBRG,
+      SPBRGH,
+      BAUDCTL,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using RCStaReg = RCStaRegBase<MultiRegisterBackend<EUSART, 0x18>>;
-    using TXReg = MultiRegisterBackend<EUSART, 0x19>;
-    using RCReg = MultiRegisterBackend<EUSART, 0x1A>;
-    using TXStaReg = TXStaRegBase<MultiRegisterBackend<EUSART, 0x98>>;
-    using SPBRGReg = MultiRegisterBackend<EUSART, 0x99>;
-    using SPBRGHReg = MultiRegisterBackend<EUSART, 0x9A>;
-    using BaudCtlReg = BaudCtlRegBase<MultiRegisterBackend<EUSART, 0x187>>;
+    using RCStaReg = RCStaRegBase<MultiRegisterBackend<EUSART, Register::RCSTA>>;
+    using TXReg = MultiRegisterBackend<EUSART, Register::TXREG>;
+    using RCReg = MultiRegisterBackend<EUSART, Register::RCREG>;
+    using TXStaReg = TXStaRegBase<MultiRegisterBackend<EUSART, Register::TXSTA>>;
+    using SPBRGReg = MultiRegisterBackend<EUSART, Register::SPBRG>;
+    using SPBRGHReg = MultiRegisterBackend<EUSART, Register::SPBRGH>;
+    using BaudCtlReg = BaudCtlRegBase<MultiRegisterBackend<EUSART, Register::BAUDCTL>>;
 
     EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralLevelSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt);
 
     void reset();
 
-    RCStaReg rcsta_reg() { return RCStaReg(MultiRegisterBackend<EUSART, 0x18>(this)); }
-    TXStaReg txsta_reg() { return TXStaReg(MultiRegisterBackend<EUSART, 0x98>(this)); }
+    RCStaReg rcsta_reg() { return RCStaReg(MultiRegisterBackend<EUSART, Register::RCSTA>(this)); }
+    TXStaReg txsta_reg() { return TXStaReg(MultiRegisterBackend<EUSART, Register::TXSTA>(this)); }
     TXReg tx_reg() { return TXReg(this); }
     RCReg rc_reg() { return RCReg(this); }
     SPBRGReg spbrg_reg() { return SPBRGReg(this); }
     SPBRGHReg spbrgh_reg() { return SPBRGHReg(this); }
-    BaudCtlReg baudctl_reg() { return BaudCtlReg(MultiRegisterBackend<EUSART, 0x187>(this)); }
+    BaudCtlReg baudctl_reg() { return BaudCtlReg(MultiRegisterBackend<EUSART, Register::BAUDCTL>(this)); }
 
     InputPin& rc_pin() { return rc_pin_; }
     OutputPin& tx_pin() { return tx_pin_; }

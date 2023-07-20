@@ -64,9 +64,13 @@ namespace sim::pic14::internal {
     };
 
   public:
+    enum class Register : uint16_t {
+      STATUS,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using StatusReg = StatusRegBase<MultiRegisterBackend<Executor, 0x03>>;
+    using StatusReg = StatusRegBase<MultiRegisterBackend<Executor, Register::STATUS>>;
 
     class Inhibitor {
       friend class Executor;
@@ -101,7 +105,7 @@ namespace sim::pic14::internal {
     const DataBus& data_bus() const { return data_bus_; }
     DataBus& data_bus() { return data_bus_; }
 
-    StatusReg status_reg() { return StatusReg(MultiRegisterBackend<Executor, 0x03>(this)); }
+    StatusReg status_reg() { return StatusReg(MultiRegisterBackend<Executor, Register::STATUS>(this)); }
 
     /// Inhibits execution until the inhibitor is destroyed. `skip` is
     /// used to move the PC forward this many instructions before

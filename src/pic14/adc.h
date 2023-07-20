@@ -77,19 +77,26 @@ namespace sim::pic14::internal {
 
   class ADConverter : public RegisterBackend, public sim::core::Schedulable {
   public:
+    enum class Register : uint16_t {
+      ADCON0,
+      ADCON1,
+      ADRESL,
+      ADRESH,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using ADResHReg = MultiRegisterBackend<ADConverter, 0x1E>;
-    using ADCon0Reg = ADCon0RegBase<MultiRegisterBackend<ADConverter, 0x1F>>;
-    using ADResLReg = MultiRegisterBackend<ADConverter, 0x9E>;
-    using ADCon1Reg = ADCon1RegBase<MultiRegisterBackend<ADConverter, 0x9F>>;
+    using ADResHReg = MultiRegisterBackend<ADConverter, Register::ADRESH>;
+    using ADCon0Reg = ADCon0RegBase<MultiRegisterBackend<ADConverter, Register::ADCON0>>;
+    using ADResLReg = MultiRegisterBackend<ADConverter, Register::ADRESL>;
+    using ADCon1Reg = ADCon1RegBase<MultiRegisterBackend<ADConverter, Register::ADCON1>>;
 
     ADConverter(sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralEdgeSignal &&interrupt);
 
     void reset();
 
-    ADCon0Reg adcon0_reg() { return ADCon0Reg(MultiRegisterBackend<ADConverter, 0x1F>(this)); }
-    ADCon1Reg adcon1_reg() { return ADCon1Reg(MultiRegisterBackend<ADConverter, 0x9F>(this)); }
+    ADCon0Reg adcon0_reg() { return ADCon0Reg(MultiRegisterBackend<ADConverter, Register::ADCON0>(this)); }
+    ADCon1Reg adcon1_reg() { return ADCon1Reg(MultiRegisterBackend<ADConverter, Register::ADCON1>(this)); }
     ADResLReg adresl_reg() { return ADResLReg(this); }
     ADResHReg adresh_reg() { return ADResHReg(this); }
 

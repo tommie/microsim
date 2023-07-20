@@ -16,6 +16,10 @@ namespace sim::pic14::internal {
   public:
     static constexpr sim::core::Clock::duration TICKS_PER_COUNT = sim::core::Clock::duration(4);
 
+    enum class Register : uint16_t {
+      TMR0,
+    };
+
     Timer0(sim::core::ClockModifier *fosc, InterruptMux::MaskableIntconEdgeSignal &&interrupt, Core::OptionReg &&option_reg);
 
     const sim::core::Pin& pin_t0cki() const { return pin_t0cki_; }

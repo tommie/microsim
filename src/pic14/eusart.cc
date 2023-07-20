@@ -42,12 +42,15 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::AsyncImpl::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x98:
+    switch (static_cast<EUSART::Register>(addr)) {
+    case EUSART::Register::TXSTA:
       if (!eusart_->txsta_reg_.txen()) {
         eusart_->tx_interrupt_.reset();
         eusart_->set_tx_pin(true);
       }
+      break;
+
+    default:
       break;
     }
   }
@@ -134,8 +137,8 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::SyncMasterImpl::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x98:
+    switch (static_cast<EUSART::Register>(addr)) {
+    case EUSART::Register::TXSTA:
       if (!eusart_->txsta_reg_.txen()) {
         eusart_->tx_interrupt_.reset();
         eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
@@ -146,12 +149,15 @@ namespace sim::pic14::internal {
 
       // fall through
 
-    case 0x18:
+    case EUSART::Register::RCSTA:
       if (eusart_->rcsta_reg_.cren() || eusart_->rcsta_reg_.sren()) {
         eusart_->schedule_immediately();
       } else {
         eusart_->tx_interrupt_.reset();
       }
+      break;
+
+    default:
       break;
     }
   }
@@ -262,8 +268,8 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::SyncSlaveImpl::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x98:
+    switch (static_cast<EUSART::Register>(addr)) {
+    case EUSART::Register::TXSTA:
       if (!eusart_->txsta_reg_.txen()) {
         eusart_->tx_interrupt_.reset();
         eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
@@ -274,12 +280,15 @@ namespace sim::pic14::internal {
 
       // fall through
 
-    case 0x18:
+    case EUSART::Register::RCSTA:
       if (eusart_->rcsta_reg_.cren() || eusart_->rcsta_reg_.sren()) {
         eusart_->schedule_immediately();
       } else {
         eusart_->tx_interrupt_.reset();
       }
+      break;
+
+    default:
       break;
     }
   }
@@ -331,21 +340,21 @@ namespace sim::pic14::internal {
   }
 
   uint8_t EUSART::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x18: return rcsta_reg_.read();
-    case 0x19: return tx_reg_.read();
-    case 0x1A: return pop_rcreg();
-    case 0x98: return txsta_reg_.read();
-    case 0x99: return spbrg_reg_.read();
-    case 0x9A: return spbrgh_reg_.read();
-    case 0x187: return baudctl_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::RCSTA: return rcsta_reg_.read();
+    case Register::TXREG: return tx_reg_.read();
+    case Register::RCREG: return pop_rcreg();
+    case Register::TXSTA: return txsta_reg_.read();
+    case Register::SPBRG: return spbrg_reg_.read();
+    case Register::SPBRGH: return spbrgh_reg_.read();
+    case Register::BAUDCTL: return baudctl_reg_.read();
+    default: std::abort();
     }
   }
 
   void EUSART::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x18:
+    switch (static_cast<Register>(addr)) {
+    case Register::RCSTA:
       rcsta_reg_.write_masked(value);
       if (!rcsta_reg_.spen() || !rcsta_reg_.cren())
         rcsta_reg_.set_oerr(false);
@@ -353,7 +362,7 @@ namespace sim::pic14::internal {
       update_impl();
       break;
 
-    case 0x19:
+    case Register::TXREG:
       tx_reg_.write(value);
 
       // Based on SYNC Tx, the TSR can be loaded even when TXEN is
@@ -369,11 +378,11 @@ namespace sim::pic14::internal {
       }
       break;
 
-    case 0x1A:
+    case Register::RCREG:
       rcreg_fifo_[rcreg_fifo_tail_] = value;
       break;
 
-    case 0x98:
+    case Register::TXSTA:
       txsta_reg_.write_masked(value);
       update_impl();
       update_bit_duration();
@@ -382,17 +391,17 @@ namespace sim::pic14::internal {
         schedule_immediately();
       break;
 
-    case 0x99:
+    case Register::SPBRG:
       spbrg_reg_.write(value);
       update_bit_duration();
       break;
 
-    case 0x9A:
+    case Register::SPBRGH:
       spbrgh_reg_.write(value);
       update_bit_duration();
       break;
 
-    case 0x187:
+    case Register::BAUDCTL:
       baudctl_reg_.write_masked(value);
       update_bit_duration();
       break;

@@ -45,6 +45,12 @@ namespace sim::pic14::internal {
   template<typename Pin>
   class PortBase : public RegisterBackend {
   public:
+    enum class Register : uint16_t {
+      PORT,
+      TRIS,
+      NUM_REGISTERS,
+    };
+
     uint8_t read_register(uint16_t addr) override { return read(addr); }
     void write_register(uint16_t addr, uint8_t value) override { write(addr, value); }
 
@@ -100,6 +106,13 @@ namespace sim::pic14::internal {
 
   class InterruptiblePort : public PortBase<InterruptiblePortPin> {
   public:
+    enum class Register : uint16_t {
+      PORT = static_cast<uint16_t>(PortBase<InterruptiblePortPin>::Register::PORT),
+      TRIS = static_cast<uint16_t>(PortBase<InterruptiblePortPin>::Register::TRIS),
+      WPU = static_cast<uint16_t>(PortBase<InterruptiblePortPin>::Register::NUM_REGISTERS),
+      IOC,
+    };
+
     InterruptiblePort(uint8_t index,
                       sim::core::DeviceListener *listener,
                       InterruptMux::MaskableIntconEdgeSignal &&change);

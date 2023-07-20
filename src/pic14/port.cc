@@ -18,17 +18,17 @@ namespace sim::pic14::internal {
 
   template<typename Pin>
   inline uint8_t PortBase<Pin>::read(uint16_t addr) {
-    if (addr == 0x05 + index_) {
-      return (output_ & ~tris_) | (input_ & tris_);
-    } else {
-      return tris_;
+    switch (static_cast<Register>(addr)) {
+    case Register::PORT: return (output_ & ~tris_) | (input_ & tris_);
+    case Register::TRIS: return tris_;
+    default: std::abort();
     }
   }
 
   template<typename Pin>
   inline void PortBase<Pin>::write(uint16_t addr, uint8_t value) {
-    if (addr == 0x05 + index_) {
-      // PORTx
+    switch (static_cast<Register>(addr)) {
+    case Register::PORT:
       for (int i = 0; i < 8; ++i) {
         uint8_t mask = 1u << i;
         bool v = ((value & mask) != 0);
@@ -39,8 +39,9 @@ namespace sim::pic14::internal {
       }
 
       output_ = value;
-    } else {
-      // TRISx
+      break;
+
+    case Register::TRIS:
       for (int i = 0; i < 8; ++i) {
         uint8_t mask = 1u << i;
         bool v = (value & mask) != 0;
@@ -52,6 +53,10 @@ namespace sim::pic14::internal {
       }
 
       tris_ = value;
+      break;
+
+    default:
+      break;
     }
   }
 
@@ -81,19 +86,16 @@ namespace sim::pic14::internal {
       change_(std::move(change)) {}
 
   uint8_t InterruptiblePort::read_register(uint16_t addr) {
-    if (addr == 0x95) {
-      return wpu_;
-    } else if (addr == 0x96) {
-      return ioc_;
-    } else {
-      return PortBase::read(addr);
+    switch (static_cast<Register>(addr)) {
+    case Register::WPU: return wpu_;
+    case Register::IOC: return ioc_;
+    default: return PortBase::read(addr);
     }
   }
 
   void InterruptiblePort::write_register(uint16_t addr, uint8_t value) {
-    if (addr == 0x95) {
-      // WPUx
-
+    switch (static_cast<Register>(addr)) {
+    case Register::WPU:
       for (int i = 0; i < 8; ++i) {
         uint8_t mask = 1u << i;
         bool wpu = (value & mask) != 0;
@@ -105,9 +107,13 @@ namespace sim::pic14::internal {
         }
       }
       wpu_ = value;
-    } else if (addr == 0x96) {
+      break;
+
+    case Register::IOC:
       ioc_ = value;
-    } else {
+      break;
+
+    default:
       PortBase::write(addr, value);
     }
   }

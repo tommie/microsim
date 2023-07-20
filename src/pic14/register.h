@@ -29,7 +29,7 @@ namespace sim::pic14::internal {
   /// A backend for a BitRegister that updates a
   /// `RegisterBackend`. Use this for registers that may trigger
   /// changes in other modules, e.g. interrupts.
-  template<typename Backend, typename Backend::RegisterAddressType Addr>
+  template<typename Backend, typename Backend::Register Addr>
   class MultiRegisterBackend {
   public:
     using RegisterType = typename Backend::RegisterType;
@@ -37,9 +37,9 @@ namespace sim::pic14::internal {
     explicit MultiRegisterBackend(Backend *backend)
       : backend_(backend) {}
 
-    RegisterType read() { return backend_->read_register(Addr); }
-    RegisterType read() const { return backend_->read_register(Addr); }
-    void write(const RegisterType &v) { backend_->write_register(Addr, v); }
+    RegisterType read() { return backend_->read_register(static_cast<RegisterType>(Addr)); }
+    RegisterType read() const { return backend_->read_register(static_cast<RegisterType>(Addr)); }
+    void write(const RegisterType &v) { backend_->write_register(static_cast<RegisterType>(Addr), v); }
 
   private:
     Backend *backend_;

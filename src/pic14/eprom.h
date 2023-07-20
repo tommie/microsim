@@ -61,14 +61,23 @@ namespace sim::pic14::internal {
     static constexpr uint16_t EECON2_MAGIC = 0x55AA;
 
   public:
+    enum class Register : uint16_t {
+      EEDAT,
+      EEDATH,
+      EEADR,
+      EEADRH,
+      EECON1,
+      EECON2,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using EEDatReg = MultiRegisterBackend<EPROM, 0x10C>;
-    using EEAdrReg = MultiRegisterBackend<EPROM, 0x10D>;
-    using EEDatHReg = MultiRegisterBackend<EPROM, 0x10E>;
-    using EEAdrHReg = MultiRegisterBackend<EPROM, 0x10F>;
-    using EECon1Reg = EECon1RegBase<MultiRegisterBackend<EPROM, 0x18C>>;
-    using EECon2Reg = MultiRegisterBackend<EPROM, 0x18D>;
+    using EEDatReg = MultiRegisterBackend<EPROM, Register::EEDAT>;
+    using EEAdrReg = MultiRegisterBackend<EPROM, Register::EEADR>;
+    using EEDatHReg = MultiRegisterBackend<EPROM, Register::EEDATH>;
+    using EEAdrHReg = MultiRegisterBackend<EPROM, Register::EEADRH>;
+    using EECon1Reg = EECon1RegBase<MultiRegisterBackend<EPROM, Register::EECON1>>;
+    using EECon2Reg = MultiRegisterBackend<EPROM, Register::EECON2>;
 
     EPROM(NonVolatile *nv, sim::core::Clock *lfintosc, const Core::Config2Reg *config2, InterruptMux::MaskablePeripheralEdgeSignal &&interrupt, Executor *exec);
 
@@ -78,7 +87,7 @@ namespace sim::pic14::internal {
     EEDatHReg eedath_reg() { return EEDatHReg(this); }
     EEAdrReg eeadr_reg() { return EEAdrReg(this); }
     EEAdrHReg eeadrh_reg() { return EEAdrHReg(this); }
-    EECon1Reg eecon1_reg() { return EECon1Reg(MultiRegisterBackend<EPROM, 0x18C>(this)); }
+    EECon1Reg eecon1_reg() { return EECon1Reg(MultiRegisterBackend<EPROM, Register::EECON1>(this)); }
     EECon2Reg eecon2_reg() { return EECon2Reg(this); }
 
     uint8_t read_register(uint16_t addr) override;

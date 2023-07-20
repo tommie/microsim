@@ -34,29 +34,30 @@ namespace sim::pic14::internal {
 
   template<int PgmDatBufSize, const std::array<uint16_t, 4> SelfWriteCutoffs>
   uint8_t EPROM<PgmDatBufSize, SelfWriteCutoffs>::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x10C: return eedat_reg_.read();
-    case 0x10D: return eeadr_reg_.read();
-    case 0x10E: return eedath_reg_.read();
-    case 0x10F: return eeadrh_reg_.read();
-    case 0x18C: return eecon1_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::EEDAT: return eedat_reg_.read();
+    case Register::EEADR: return eeadr_reg_.read();
+    case Register::EEDATH: return eedath_reg_.read();
+    case Register::EEADRH: return eeadrh_reg_.read();
+    case Register::EECON1: return eecon1_reg_.read();
+    case Register::EECON2: return 0;
+    default: std::abort();
     }
   }
 
   template<int PgmDatBufSize, const std::array<uint16_t, 4> SelfWriteCutoffs>
   void EPROM<PgmDatBufSize, SelfWriteCutoffs>::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x10C: eedat_reg_.write(value); break;
-    case 0x10D: eeadr_reg_.write(value); break;
-    case 0x10E: {
+    switch (static_cast<Register>(addr)) {
+    case Register::EEDAT: eedat_reg_.write(value); break;
+    case Register::EEADR: eeadr_reg_.write(value); break;
+    case Register::EEDATH: {
       eedath_reg_.write(value);
       push_pgmdat((static_cast<uint16_t>(value) << 8) | eedat_reg_.read());
       break;
     }
-    case 0x10F: eeadrh_reg_.write(value); break;
+    case Register::EEADRH: eeadrh_reg_.write(value); break;
 
-    case 0x18C:
+    case Register::EECON1:
       if ((eecon1_reg_.rd() || eecon1_reg_.wr()) && (value & ((1u << EECon1Reg::RD) | (1u << EECon1Reg::WR))))
         break;
 
@@ -100,7 +101,7 @@ namespace sim::pic14::internal {
       }
       break;
 
-    case 0x18D:  // EECON2
+    case Register::EECON2:
       eecon2_reg_ = (eecon2_reg_ << 8) | value;
       break;
     }

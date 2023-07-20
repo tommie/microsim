@@ -33,15 +33,15 @@ namespace sim::pic14::internal {
   }
 
   uint8_t Timer0::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x01: return tmr0_reg_ + (option_reg_.t0cs() ? 0 : fosc_.delta() / prescaler_ / TICKS_PER_COUNT);
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::TMR0: return tmr0_reg_ + (option_reg_.t0cs() ? 0 : fosc_.delta() / prescaler_ / TICKS_PER_COUNT);
+    default: std::abort();
     }
   }
 
   void Timer0::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x01:
+    switch (static_cast<Register>(addr)) {
+    case Register::TMR0:
       tmr0_reg_ = value + 2;
       if (option_reg_.t0cs()) {
         prescaler_ = prescaled();

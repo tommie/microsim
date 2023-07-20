@@ -432,15 +432,15 @@ namespace sim::pic14::internal {
   }
 
   uint8_t Executor::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x03: return status_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::STATUS: return status_reg_.read();
+    default: std::abort();
     }
   }
 
   void Executor::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x03: status_reg_.write(value); break;
+    switch (static_cast<Register>(addr)) {
+    case Register::STATUS: status_reg_.write(value); break;
     }
   }
 

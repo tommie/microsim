@@ -171,11 +171,17 @@ namespace sim::pic14::internal {
   /// Core parts that are shared by multiple other modules.
   class Core : public RegisterBackend, public sim::core::Schedulable {
   public:
+    enum class Register : uint16_t {
+      OPTION,
+      PCON,
+      OSCCON,
+    };
+
     using RegisterType = uint8_t;
     using RegisterAddressType = uint16_t;
-    using OptionReg = OptionRegBase<MultiRegisterBackend<Core, 0x81>>;
-    using PConReg = PConRegBase<MultiRegisterBackend<Core, 0x8E>>;
-    using OscConReg = OscConRegBase<MultiRegisterBackend<Core, 0x8F>>;
+    using OptionReg = OptionRegBase<MultiRegisterBackend<Core, Register::OPTION>>;
+    using PConReg = PConRegBase<MultiRegisterBackend<Core, Register::PCON>>;
+    using OscConReg = OscConRegBase<MultiRegisterBackend<Core, Register::OSCCON>>;
     using Config1Reg = Config1RegBase<SingleRegisterBackend<uint16_t>>;
     using Config2Reg = Config2RegBase<SingleRegisterBackend<uint16_t>>;
 
@@ -183,8 +189,8 @@ namespace sim::pic14::internal {
 
     void reset();
 
-    OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, 0x81>(this)); }
-    PConReg pcon_reg() { return PConReg(MultiRegisterBackend<Core, 0x8E>(this)); }
+    OptionReg option_reg() { return OptionReg(MultiRegisterBackend<Core, Register::OPTION>(this)); }
+    PConReg pcon_reg() { return PConReg(MultiRegisterBackend<Core, Register::PCON>(this)); }
     const Config1Reg& config1() const { return config1_; }
     const Config2Reg& config2() const { return config2_; }
 

@@ -25,18 +25,18 @@ namespace sim::pic14::internal {
   }
 
   uint8_t ADConverter::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x1F: return adcon0_reg_.read();
-    case 0x9F: return adcon1_reg_.read();
-    case 0x9E: return adresl_reg_.read();
-    case 0x1E: return adresh_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::ADCON0: return adcon0_reg_.read();
+    case Register::ADCON1: return adcon1_reg_.read();
+    case Register::ADRESL: return adresl_reg_.read();
+    case Register::ADRESH: return adresh_reg_.read();
+    default: std::abort();
     }
   }
 
   void ADConverter::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x1F:
+    switch (static_cast<Register>(addr)) {
+    case Register::ADCON0:
       adcon0_reg_.write(value);
       if (adcon0_reg_.go() && adcon0_reg_.adon()) {
         if (adcon0_reg_.adcs() == 3)
@@ -48,9 +48,9 @@ namespace sim::pic14::internal {
       }
       break;
 
-    case 0x9F: adcon1_reg_.write_masked(value); break;
-    case 0x9E: adresl_reg_.write(value); break;
-    case 0x1E: adresh_reg_.write(value); break;
+    case Register::ADCON1: adcon1_reg_.write_masked(value); break;
+    case Register::ADRESL: adresl_reg_.write(value); break;
+    case Register::ADRESH: adresh_reg_.write(value); break;
     }
   }
 

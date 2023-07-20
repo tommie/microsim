@@ -45,6 +45,8 @@ namespace sim::pic14 {
       static const uint16_t EEDATA_SIZE = Config::EEDataSize;
       static const uint16_t CONFIG_SIZE = 9;
 
+      using EPROMType = internal::EPROM<Config::PgmDatBufSize, self_write_cutoffs<Config::ProgSize>()>;
+
     public:
       explicit P16F88X(sim::core::DeviceListener *listener, sim::core::Clock *extosc);
 
@@ -73,7 +75,7 @@ namespace sim::pic14 {
       internal::ExternalInterrupt extint_;
       internal::ADConverter adc_;
       internal::UltraLowPowerWakeUp ulpwu_;
-      internal::EPROM<Config::PgmDatBufSize, self_write_cutoffs<Config::ProgSize>()> eprom_;
+      EPROMType eprom_;
       internal::EUSART eusart_;
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;

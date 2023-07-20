@@ -41,15 +41,15 @@ namespace sim::pic14::internal {
   }
 
   uint8_t WatchDogTimer::read_register(uint16_t addr) {
-    switch (addr) {
-    case 0x105: return wdtcon_reg_.read();
-    default: return 0;
+    switch (static_cast<Register>(addr)) {
+    case Register::WDTCON: return wdtcon_reg_.read();
+    default: std::abort();
     }
   }
 
   void WatchDogTimer::write_register(uint16_t addr, uint8_t value) {
-    switch (addr) {
-    case 0x105:
+    switch (static_cast<Register>(addr)) {
+    case Register::WDTCON:
       if (value != wdtcon_reg_.read()) {
         wdtcon_reg_.write_masked(value);
         schedule_immediately();

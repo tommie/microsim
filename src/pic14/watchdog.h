@@ -37,6 +37,10 @@ namespace sim::pic14 {
 
   class WatchDogTimer : public sim::core::Schedulable, public RegisterBackend {
   public:
+    enum class Register : uint16_t {
+      WDTCON,
+    };
+
     WatchDogTimer(sim::core::Clock *lfintosc, sim::core::Signal<bool> *reset, Core::OptionReg &&option_reg, const Core::Config1Reg *config1, Executor::StatusReg &&status_reg);
 
     void reset();
