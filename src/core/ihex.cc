@@ -24,7 +24,7 @@ namespace sim::core {
 
   }
 
-  sim::util::Status load_ihex(std::istream &in, std::function<sim::util::Status(uint32_t, std::u8string_view)> load) {
+  sim::util::Status load_ihex(std::istream &in, std::function<sim::util::Status(uint32_t, const std::vector<uint8_t>&)> load) {
     for (std::array<char, 256> buf; in.getline(&buf[0], buf.size());) {
       std::string line(&buf[0]);
 
@@ -56,7 +56,7 @@ namespace sim::core {
         return std::make_error_code(std::errc::invalid_argument);
       }
 
-      std::u8string data(count, 0);
+      std::vector<uint8_t> data(count, 0);
       for (size_t i = 0, j = 1 + 2 + 4 + 2; i < count; ++i, j += 2) {
         data[i] = parse_hex(line[j], line[j + 1]);
       }

@@ -1,31 +1,34 @@
 #include "core.h"
 
+#include <span>
 #include <system_error>
 
 namespace sim::pic14 {
 
-  sim::util::Status ICSP::load_program(uint16_t addr, std::u8string_view data) {
-    while (data.size() > 1) {
+  sim::util::Status ICSP::load_program(uint16_t addr, const std::vector<uint8_t> &data) {
+    auto data_span = std::span(data);
+
+    while (data_span.size() > 1) {
       if (addr < device_->progmem().size()) {
-        uint16_t end = std::min<uint16_t>(addr + data.size() / 2, device_->progmem().size());
+        uint16_t end = std::min<uint16_t>(addr + data_span.size() / 2, device_->progmem().size());
         for (uint16_t i = addr, j = 0; i < end; ++i, j += 2) {
-          device_->progmem()[i] = (static_cast<uint16_t>(data[j + 1]) << 8) | data[j];
+          device_->progmem()[i] = (static_cast<uint16_t>(data_span[j + 1]) << 8) | data_span[j];
         }
-        data = data.substr((end - addr) * 2);
+        data_span = data_span.subspan((end - addr) * 2);
         addr = end;
       } else if (addr >= 0x2000 && addr < 0x2000 + device_->config().size()) {
-        uint16_t end = std::min<uint16_t>(addr + data.size() / 2, 0x2000 + device_->config().size());
+        uint16_t end = std::min<uint16_t>(addr + data_span.size() / 2, 0x2000 + device_->config().size());
         for (uint16_t i = addr, j = 0; i < end; ++i, j += 2) {
-          device_->config()[i - 0x2000] = (static_cast<uint16_t>(data[j + 1]) << 8) | data[j];
+          device_->config()[i - 0x2000] = (static_cast<uint16_t>(data_span[j + 1]) << 8) | data_span[j];
         }
-        data = data.substr((end - addr) * 2);
+        data_span = data_span.subspan((end - addr) * 2);
         addr = end;
       } else if (addr >= 0x2100 && addr < 0x2100 + device_->eedata().size()) {
-        uint16_t end = std::min<uint16_t>(addr + data.size() / 2, 0x2100 + device_->eedata().size());
+        uint16_t end = std::min<uint16_t>(addr + data_span.size() / 2, 0x2100 + device_->eedata().size());
         for (uint16_t i = addr, j = 0; i < end; ++i, j += 2) {
-          device_->eedata()[i - 0x2000] = (static_cast<uint16_t>(data[j + 1]) << 8) | data[j];
+          device_->eedata()[i - 0x2000] = (static_cast<uint16_t>(data_span[j + 1]) << 8) | data_span[j];
         }
-        data = data.substr((end - addr) * 2);
+        data_span = data_span.subspan((end - addr) * 2);
         addr = end;
       } else {
         break;
@@ -35,12 +38,14 @@ namespace sim::pic14 {
     return std::error_code{};
   }
 
-  sim::util::Status ICSP::load_data(uint16_t addr, std::u8string_view data) {
-    while (!data.empty()) {
+  sim::util::Status ICSP::load_data(uint16_t addr, const std::vector<uint8_t> &data) {
+    auto data_span = std::span(data);
+
+    while (!data_span.empty()) {
       if (addr >= 0x2100 && addr < 0x2100 + device_->eedata().size()) {
-        uint16_t end = std::min<uint16_t>(addr + data.size(), 0x2100 + device_->eedata().size());
-        device_->eedata().replace(addr - 0x2100, end - addr, data);
-        data = data.substr(end - addr);
+        uint16_t end = std::min<uint16_t>(addr + data_span.size(), 0x2100 + device_->eedata().size());
+        std::copy(std::begin(data_span), std::begin(data_span) + end - addr, std::begin(device_->eedata()) + addr - 0x2100);
+        data_span = data_span.subspan(end - addr);
         addr = end;
       } else {
         break;

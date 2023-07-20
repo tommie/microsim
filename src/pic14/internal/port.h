@@ -9,7 +9,6 @@
 
 #include <array>
 #include <cstdint>
-#include <string_view>
 
 namespace sim::pic14::internal {
 

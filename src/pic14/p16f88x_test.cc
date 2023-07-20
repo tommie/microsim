@@ -5,6 +5,8 @@
 #include <list>
 #include <unordered_map>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 #include "../core/ihex.h"
 #include "../core/trace.h"
@@ -32,7 +34,7 @@ public:
   NRZReceiver(const sim::core::SimulationClock *sim_clock, sim::core::Pin *pin, unsigned int num_data_bits, sim::core::Duration bit_duration)
     : sim_clock_(sim_clock), rcvr_(num_data_bits, bit_duration.count()), pin_(pin) {}
 
-  std::u16string_view received() const { return rcvr_.received(); }
+  const std::vector<uint16_t>& received() const { return rcvr_.received(); }
 
   void pin_changed(sim::core::Pin *pin) {
     if (pin != pin_) return;
@@ -55,7 +57,7 @@ public:
 
   bool empty() const { return !tmtr_ || tmtr_->empty(); }
 
-  void transmit(std::u16string_view data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
+  void transmit(const std::vector<uint16_t> &data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
     if (tmtr_) std::abort();  // Already transmitting.
 
     bit_duration_ = bit_duration;
@@ -100,11 +102,11 @@ private:
 
 class SPISlave {
 public:
-  SPISlave(sim::core::Pin *ck_pin, sim::core::Pin *dt_pin, unsigned int num_data_bits, std::u16string_view data = {})
+  SPISlave(sim::core::Pin *ck_pin, sim::core::Pin *dt_pin, unsigned int num_data_bits, const std::vector<uint16_t> &data = {})
     : spi_(num_data_bits, data),
       ck_pin_(ck_pin), dt_pin_(dt_pin) {}
 
-  std::u16string_view data() const { return spi_.data(); }
+  const std::vector<uint16_t>& data() const { return spi_.data(); }
 
   void pin_changed(sim::core::Pin *pin) {
     if (pin != ck_pin_ && pin != dt_pin_) return;
@@ -130,9 +132,9 @@ public:
   }
 
   bool empty() const { return spi_->empty(); }
-  std::u16string_view data() const { return spi_->data(); }
+  const std::vector<uint16_t>& data() const { return spi_->data(); }
 
-  void transact(std::u16string_view data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
+  void transact(const std::vector<uint16_t> &data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
     ck_pin_->set_external(false);
     do_pin_->set_external(false);
 
@@ -466,7 +468,7 @@ PROCESSOR_TEST(EUSARTAsyncTransmitTest, P16F887, "testdata/eusart_async_tx.hex")
 }
 
 PROCESSOR_TEST(EUSARTAsyncReceiveTest, P16F887, "testdata/eusart_async_rc.hex") {
-  tmtr.transmit(std::u16string{42}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
+  tmtr.transmit({42}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
 
   advance_until_sleep();
 
@@ -474,7 +476,7 @@ PROCESSOR_TEST(EUSARTAsyncReceiveTest, P16F887, "testdata/eusart_async_rc.hex") 
 }
 
 PROCESSOR_TEST(EUSARTAutoBaudRateDetectTest, P16F887, "testdata/eusart_abd.hex") {
-  tmtr.transmit(std::u16string{0x55}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
+  tmtr.transmit({0x55}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
 
   advance_until_sleep();
 
@@ -486,7 +488,7 @@ PROCESSOR_TEST(EUSARTWakeUpTest, P16F887, "testdata/eusart_wakeup.hex") {
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
 
-  tmtr.transmit(std::u16string{0}, 8, sim::core::Microseconds(16));
+  tmtr.transmit({0}, 8, sim::core::Microseconds(16));
 
   advance_until_sleep();
 
@@ -506,7 +508,7 @@ PROCESSOR_TEST(EUSARTMasterTransmitTest, P16F887, "testdata/eusart_master_tx.hex
 }
 
 PROCESSOR_TEST(EUSARTMasterReceiveTest, P16F887, "testdata/eusart_master_rc.hex") {
-  SPISlave spi(pins["CK"], pins["DT"], 8, std::u16string{42});
+  SPISlave spi(pins["CK"], pins["DT"], 8, {42});
   set_spi_slave(&spi);
 
   advance_until_sleep();
@@ -519,7 +521,7 @@ PROCESSOR_TEST(EUSARTSlaveTransmitTest, P16F887, "testdata/eusart_slave_tx.hex")
 
   if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
 
-  spi_master.transact(std::u16string{0x8000, 0x8000}, 8, sim::core::Microseconds(16));
+  spi_master.transact({0x8000, 0x8000}, 8, sim::core::Microseconds(16));
 
   advance_until_empty(spi_master);
 
@@ -532,7 +534,7 @@ PROCESSOR_TEST(EUSARTSlaveTransmitTest, P16F887, "testdata/eusart_slave_tx.hex")
 }
 
 PROCESSOR_TEST(EUSARTSlaveReceiveTest, P16F887, "testdata/eusart_slave_rc.hex") {
-  spi_master.transact(std::u16string{42, 43}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
+  spi_master.transact({42, 43}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
 
   advance_until_empty(spi_master);
   advance_until_sleep();

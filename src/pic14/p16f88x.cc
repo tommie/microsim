@@ -4,8 +4,8 @@
 
 namespace sim::pic14::internal {
 
-  std::u16string build_addrmap(uint16_t size) {
-    std::u16string addrmap(size, 0xFFFF);
+  std::vector<uint16_t> build_addrmap(uint16_t size) {
+    std::vector<uint16_t> addrmap(size, 0xFFFF);
 
     addrmap[0x82] = addrmap[0x102] = addrmap[0x182] = 0x02;  // PCL
     addrmap[0x8A] = addrmap[0x10A] = addrmap[0x18A] = 0x0A;  // PCLATH
@@ -18,8 +18,8 @@ namespace sim::pic14::internal {
   }
 
   template<typename Config>
-  const std::u16string_view P16F88X<Config>::address_map() {
-    static const std::u16string addrmap = build_addrmap(P16F88X::FILE_BUS_SIZE);
+  const std::vector<uint16_t>& P16F88X<Config>::address_map() {
+    static const std::vector<uint16_t> addrmap = build_addrmap(P16F88X::FILE_BUS_SIZE);
     return addrmap;
   }
 

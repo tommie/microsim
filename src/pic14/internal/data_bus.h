@@ -2,7 +2,6 @@
 #define sim_pic14_internal_data_bus_h
 
 #include <cstdint>
-#include <string>
 #include <vector>
 
 namespace sim::pic14::internal {
@@ -26,7 +25,7 @@ namespace sim::pic14::internal {
 
   private:
     uint8_t reset_value_;
-    std::u8string cells_;
+    std::vector<uint8_t> cells_;
   };
 
   /// A data bus that can dispatch to backends, or SRAM. Only
@@ -37,7 +36,7 @@ namespace sim::pic14::internal {
     /// `backends`. An 0xFF entry means "backed by SRAM." The
     /// `indexmap` is a mapping from address space to per-backend
     /// index space. An 0xFFFF entry means "identity mapping."
-    ActiveDataBus(SRAM &&sram, std::vector<RegisterBackend*> &&backends, std::u8string &&backmap, std::u16string &&indexmap)
+    ActiveDataBus(SRAM &&sram, std::vector<RegisterBackend*> &&backends, std::vector<uint8_t> &&backmap, std::vector<uint16_t> &&indexmap)
       : sram_(std::move(sram)),
         backends_(std::move(backends)),
         backmap_(std::move(backmap)),
@@ -92,8 +91,8 @@ namespace sim::pic14::internal {
   private:
     SRAM sram_;
     std::vector<RegisterBackend*> backends_;
-    std::u8string backmap_;
-    std::u16string indexmap_;
+    std::vector<uint8_t> backmap_;
+    std::vector<uint16_t> indexmap_;
   };
 
   /// A data bus that implements indirect addressing.
@@ -128,7 +127,7 @@ namespace sim::pic14::internal {
   public:
     /// The `addrmap` view is borrowed, and must remain valid during
     /// the lifetime of the DataBus.
-    DataBus(uint16_t size, uint8_t reset_value, std::vector<RegisterBackend*> &&backs, std::u8string &&backmap, std::u16string &&indexmap)
+    DataBus(uint16_t size, uint8_t reset_value, std::vector<RegisterBackend*> &&backs, std::vector<uint8_t> &&backmap, std::vector<uint16_t> &&indexmap)
       : IndirectDataBus(ActiveDataBus(SRAM(size, reset_value), std::move(backs), std::move(backmap), std::move(indexmap))) {}
   };
 
@@ -141,10 +140,11 @@ namespace sim::pic14::internal {
       std::initializer_list<uint16_t> addrs;
     };
 
-    DataBusBuilder(std::u16string_view indexmap)
+    template<typename IC>
+    DataBusBuilder(const IC &indexmap)
       : backmap_(BusSize, 0xFF),
         indexmap_(BusSize, 0xFFFF) {
-      std::copy(indexmap.begin(), indexmap.end(), indexmap_.begin());
+      std::copy(std::begin(indexmap), std::end(indexmap), std::begin(indexmap_));
     }
 
     DataBus build(uint8_t reset_value) {
@@ -180,8 +180,8 @@ namespace sim::pic14::internal {
 
   private:
     std::vector<internal::RegisterBackend*> backs_;
-    std::u8string backmap_;
-    std::u16string indexmap_;
+    std::vector<uint8_t> backmap_;
+    std::vector<uint16_t> indexmap_;
   };
 
 }  // namespace sim::pic14::internal

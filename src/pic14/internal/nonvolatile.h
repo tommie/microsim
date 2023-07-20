@@ -2,7 +2,7 @@
 #define sim_pic14_internal_nonvolatile_h
 
 #include <cstdint>
-
+#include <vector>
 
 namespace sim::pic14::internal {
 
@@ -23,14 +23,14 @@ namespace sim::pic14::internal {
         eedata_(config.eedata_size, 0xFF) {}
 
   public:
-    std::u16string& progmem() { return progmem_; }
-    std::u16string& config() { return config_; }
-    std::u8string& eedata() { return eedata_; }
+    std::vector<uint16_t>& progmem() { return progmem_; }
+    std::vector<uint16_t>& config() { return config_; }
+    std::vector<uint8_t>& eedata() { return eedata_; }
 
   private:
-    std::u16string progmem_;
-    std::u16string config_;
-    std::u8string eedata_;
+    std::vector<uint16_t> progmem_;
+    std::vector<uint16_t> config_;
+    std::vector<uint8_t> eedata_;
   };
 
 }  // namespace sim::pic14::internal

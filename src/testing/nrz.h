@@ -1,8 +1,7 @@
 #ifndef sim_testing_nrz_h
 #define sim_testing_nrz_h
 
-#include <string>
-#include <string_view>
+#include <vector>
 
 namespace sim::testing {
 
@@ -17,7 +16,7 @@ namespace sim::testing {
         bit_ticks_(bit_ticks) {}
 
     bool is_receiving() const { return start_tick_ > 0; }
-    std::u16string_view received() const { return data_; }
+    const std::vector<uint16_t>& received() const { return data_; }
 
     void signal_changed(unsigned long tick, bool value) {
       if (!is_receiving() || tick > start_tick_ + (2 + num_data_bits_) * bit_ticks_) {
@@ -55,7 +54,7 @@ namespace sim::testing {
     bool prev_value_;
     int bit_ = 0;
     uint16_t buf_ = 0;
-    std::u16string data_;
+    std::vector<uint16_t> data_;
   };
 
   /// A transmitter for Non-Return-to-Zero data, such as that to UARTs.
@@ -64,7 +63,7 @@ namespace sim::testing {
   /// unimportant, but must be consistent.
   class NRZTransmitter {
   public:
-    NRZTransmitter(int num_data_bits, unsigned long bit_ticks, std::u16string_view data)
+    NRZTransmitter(int num_data_bits, unsigned long bit_ticks, const std::vector<uint16_t> &data)
       : num_data_bits_(num_data_bits),
         bit_ticks_(bit_ticks),
         data_(data) {}
@@ -81,7 +80,7 @@ namespace sim::testing {
     std::pair<unsigned long, bool> next_signal_change() {
       if (bit_ == 0) {
         buf_ = data_[0];
-        data_.erase(0, 1);
+        data_.erase(std::begin(data_));
         buf_ <<= 1;
         buf_ |= 1u << (1 + num_data_bits_);
         tick_ = 0;
@@ -106,7 +105,7 @@ namespace sim::testing {
   private:
     const int num_data_bits_;
     const unsigned long bit_ticks_;
-    std::u16string data_;
+    std::vector<uint16_t> data_;
 
     int bit_ = 0;
     uint16_t buf_;

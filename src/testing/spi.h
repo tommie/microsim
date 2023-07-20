@@ -1,9 +1,8 @@
 #ifndef sim_testing_spi_h
 #define sim_testing_spi_h
 
-#include <string>
-#include <string_view>
 #include <tuple>
+#include <vector>
 
 namespace sim::testing {
 
@@ -16,13 +15,13 @@ namespace sim::testing {
 
     /// Constructs a new master. If `data[i]` has the highest bit set,
     /// the master will receive data from the slave.
-    SPIMaster(int num_data_bits, unsigned long bit_ticks, std::u16string_view data = {})
+    SPIMaster(int num_data_bits, unsigned long bit_ticks, const std::vector<uint16_t> &data = {})
       : num_data_bits_(num_data_bits),
         bit_ticks_(bit_ticks),
         data_(data) {}
 
     bool empty() const { return bit_count_ == 8 * data_.size() && bit_ == 0; }
-    std::u16string_view data() const { return data_; }
+    const std::vector<uint16_t>& data() const { return data_; }
 
     std::tuple<unsigned long, double, double> next_signal_change(unsigned long tick, double dt) {
       if (bit_count_ >= 8 * data_.size()) {
@@ -79,7 +78,7 @@ namespace sim::testing {
     int bit_ = 0;
     unsigned int bit_count_ = 0;
     uint16_t buf_ = 0;
-    std::u16string data_;
+    std::vector<uint16_t> data_;
 
     double dt_ = 0;
     double ck_ = 0;
@@ -88,7 +87,7 @@ namespace sim::testing {
   /// An SPI slave transmitter and receiver.
   class SPISlave {
   public:
-    SPISlave(int num_data_bits, std::u16string_view data = {})
+    SPISlave(int num_data_bits, const std::vector<uint16_t> &data = {})
       : num_data_bits_(num_data_bits),
         data_(data) {}
 
@@ -96,7 +95,7 @@ namespace sim::testing {
     SPISlave& operator =(SPISlave&&) = default;
 
     bool empty() const { return data_.empty() && bit_ == 0; }
-    std::u16string_view data() const { return data_; }
+    const std::vector<uint16_t>& data() const { return data_; }
 
     /// Called when either the clock or data signal changed. If an
     /// input is in tri-state, the value should be 0.5. Returns the
@@ -114,7 +113,7 @@ namespace sim::testing {
             }
 
             buf_ = data_[0];
-            data_.erase(0, 1);
+            data_.erase(std::begin(data_));
             ++bit_;
           } else {
             buf_ >>= 1;
@@ -133,7 +132,7 @@ namespace sim::testing {
 
           if (bit_ == num_data_bits_) {
             buf_ >>= (1 + 9 - bit_);
-            data_.append(1, buf_);
+            data_.push_back(buf_);
             bit_ = 0;
             buf_ = 0;
           }
@@ -147,7 +146,7 @@ namespace sim::testing {
 
   private:
     const int num_data_bits_;
-    std::u16string data_;
+    std::vector<uint16_t> data_;
 
     int bit_ = 0;
     uint16_t buf_ = 0;

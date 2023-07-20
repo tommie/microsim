@@ -18,7 +18,6 @@
 #include <array>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace sim::pic14 {
@@ -80,7 +79,7 @@ namespace sim::pic14 {
       std::vector<sim::core::PinDescriptor> pin_descrs_;
       sim::core::Scheduler scheduler_;
 
-      static const std::u16string_view address_map();
+      static const std::vector<uint16_t>& address_map();
     };
 
   }  // namespace internal

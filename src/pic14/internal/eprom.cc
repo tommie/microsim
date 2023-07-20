@@ -121,7 +121,7 @@ namespace sim::pic14::internal {
 
             if ((addr & 0x0F) == 0x00) {
               // Erase.
-              nv_->progmem().replace(nv_->progmem().begin() + addr, nv_->progmem().begin() + addr + 0x10, 0x10, 0x3FFF);
+              std::fill(std::begin(nv_->progmem()) + addr, std::begin(nv_->progmem()) + addr + 0x10, 0x3FFF);
             }
 
             // Write.

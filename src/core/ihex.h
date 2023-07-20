@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
-#include <string_view>
+#include <vector>
 
 #include "../util/status.h"
 
@@ -12,7 +12,7 @@ namespace sim::core {
 
   // Parses a stream of Intel HEX and passes chunks of data to the
   // load function.
-  sim::util::Status load_ihex(std::istream &in, std::function<sim::util::Status(uint32_t, std::u8string_view)> load);
+  sim::util::Status load_ihex(std::istream &in, std::function<sim::util::Status(uint32_t, const std::vector<uint8_t>&)> load);
 
 }  // namespace sim::core
 

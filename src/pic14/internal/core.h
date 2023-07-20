@@ -36,11 +36,11 @@ namespace sim::pic14 {
     /// (program memory, configuration words), little-endian is used
     /// when decoding. This can also program EEPROM data presented as
     /// 16-bit values where the top byte is discarded.
-    sim::util::Status load_program(uint16_t addr, std::u8string_view data);
+    sim::util::Status load_program(uint16_t addr, const std::vector<uint8_t> &data);
 
     /// Program data at the specified address. Data is represented as
     /// 8-bit values.
-    sim::util::Status load_data(uint16_t addr, std::u8string_view data);
+    sim::util::Status load_data(uint16_t addr, const std::vector<uint8_t> &data);
 
     ICSP(ICSP&&) = default;
     ICSP(const ICSP&) = delete;
