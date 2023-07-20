@@ -1,5 +1,5 @@
-#ifndef sim_pic14_interrupt_h
-#define sim_pic14_interrupt_h
+#ifndef sim_pic14_internal_interrupt_h
+#define sim_pic14_internal_interrupt_h
 
 #include <array>
 #include <cstddef>
@@ -164,4 +164,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_interrupt_h
+#endif  // sim_pic14_internal_interrupt_h

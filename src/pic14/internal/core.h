@@ -1,14 +1,14 @@
-#ifndef sim_pic14_core_h
-#define sim_pic14_core_h
+#ifndef sim_pic14_internal_core_h
+#define sim_pic14_internal_core_h
 
 #include <cstdint>
 #include <functional>
 #include <vector>
 
-#include "../core/clock.h"
-#include "../core/scheduler.h"
-#include "../core/signal.h"
-#include "../util/status.h"
+#include "../../core/clock.h"
+#include "../../core/scheduler.h"
+#include "../../core/signal.h"
+#include "../../util/status.h"
 #include "data_bus.h"
 #include "nonvolatile.h"
 #include "pin.h"
@@ -246,4 +246,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_core_h
+#endif  // sim_pic14_internal_core_h

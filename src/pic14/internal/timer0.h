@@ -1,10 +1,10 @@
-#ifndef sim_pic14_timer0_h
-#define sim_pic14_timer0_h
+#ifndef sim_pic14_internal_timer0_h
+#define sim_pic14_internal_timer0_h
 
 #include <functional>
 
-#include "../core/clock.h"
-#include "../core/scheduler.h"
+#include "../../core/clock.h"
+#include "../../core/scheduler.h"
 #include "data_bus.h"
 #include "pin.h"
 #include "port.h"
@@ -54,4 +54,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_timer0_h
+#endif  // sim_pic14_internal_timer0_h

@@ -1,6 +1,7 @@
 .deps/
 .libs/
 
+.dirstamp
 Makefile.in
 Makefile
 test-suite.log

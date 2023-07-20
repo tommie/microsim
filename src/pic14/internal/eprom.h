@@ -1,13 +1,13 @@
-#ifndef sim_pic14_eprom_h
-#define sim_pic14_eprom_h
+#ifndef sim_pic14_internal_eprom_h
+#define sim_pic14_internal_eprom_h
 
 #include <array>
 #include <cstdint>
 #include <optional>
 
-#include "../core/clock.h"
-#include "../core/scheduler.h"
-#include "../core/trace.h"
+#include "../../core/clock.h"
+#include "../../core/scheduler.h"
+#include "../../core/trace.h"
 #include "core.h"
 #include "data_bus.h"
 #include "execution.h"
@@ -148,4 +148,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_eprom_h
+#endif  // sim_pic14_internal_eprom_h

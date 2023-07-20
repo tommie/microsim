@@ -3,17 +3,17 @@
 
 #include "../core/device.h"
 #include "../core/scheduler.h"
-#include "adc.h"
-#include "core.h"
-#include "eprom.h"
-#include "eusart.h"
-#include "execution.h"
-#include "extint.h"
-#include "port.h"
-#include "register.h"
-#include "timer0.h"
-#include "ulpwu.h"
-#include "watchdog.h"
+#include "internal/adc.h"
+#include "internal/core.h"
+#include "internal/eprom.h"
+#include "internal/eusart.h"
+#include "internal/execution.h"
+#include "internal/extint.h"
+#include "internal/port.h"
+#include "internal/register.h"
+#include "internal/timer0.h"
+#include "internal/ulpwu.h"
+#include "internal/watchdog.h"
 
 #include <array>
 #include <cstdint>

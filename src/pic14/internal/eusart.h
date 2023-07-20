@@ -1,13 +1,13 @@
-#ifndef sim_pic14_eusart_h
-#define sim_pic14_eusart_h
+#ifndef sim_pic14_internal_eusart_h
+#define sim_pic14_internal_eusart_h
 
 #include <cstdint>
 #include <variant>
 
-#include "../core/clock.h"
-#include "../core/device.h"
-#include "../core/scheduler.h"
-#include "../core/trace.h"
+#include "../../core/clock.h"
+#include "../../core/device.h"
+#include "../../core/scheduler.h"
+#include "../../core/trace.h"
 #include "data_bus.h"
 #include "execution.h"
 #include "interrupt.h"
@@ -303,4 +303,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_eusart_h
+#endif  // sim_pic14_internal_eusart_h

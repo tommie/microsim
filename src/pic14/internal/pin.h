@@ -1,7 +1,7 @@
-#ifndef sim_pic14_pin_h
-#define sim_pic14_pin_h
+#ifndef sim_pic14_internal_pin_h
+#define sim_pic14_internal_pin_h
 
-#include "../core/device.h"
+#include "../../core/device.h"
 
 namespace sim::pic14 {
 
@@ -68,4 +68,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_pin_h
+#endif  // sim_pic14_internal_pin_h

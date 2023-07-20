@@ -1,5 +1,5 @@
-#ifndef sim_pic14_register_h
-#define sim_pic14_register_h
+#ifndef sim_pic14_internal_register_h
+#define sim_pic14_internal_register_h
 
 #include <cstdint>
 #include <string>
@@ -105,4 +105,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_register_h
+#endif  // sim_pic14_internal_register_h

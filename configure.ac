@@ -1,7 +1,7 @@
 AC_INIT([microsim], [0.1], [tommie@users.noreply.github.com])
 AC_CONFIG_MACRO_DIRS([autom4])
 AC_CONFIG_AUX_DIR([autoaux])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 
 AM_PROG_AR
 AC_PROG_CXX

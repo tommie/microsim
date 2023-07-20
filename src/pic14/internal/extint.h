@@ -1,5 +1,5 @@
-#ifndef sim_pic14_extint_h
-#define sim_pic14_extint_h
+#ifndef sim_pic14_internal_extint_h
+#define sim_pic14_internal_extint_h
 
 #include "core.h"
 #include "interrupt.h"
@@ -22,4 +22,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_extint_h
+#endif  // sim_pic14_internal_extint_h

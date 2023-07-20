@@ -2,40 +2,52 @@ SUBDIRS = testdata
 
 lib_LTLIBRARIES = libpic14.la
 
+internal_sources = \
+	internal/adc.cc \
+	internal/core.cc \
+	internal/data_bus.cc \
+	internal/eprom.cc \
+	internal/eusart.cc \
+	internal/execution.cc \
+	internal/extint.cc \
+	internal/interrupt.cc \
+	internal/port.cc \
+	internal/timer0.cc \
+	internal/ulpwu.cc \
+	internal/watchdog.cc
+
+internal_headers = \
+	internal/adc.h \
+	internal/core.h \
+	internal/data_bus.h \
+	internal/eprom.h \
+	internal/eusart.cc \
+	internal/execution.h \
+	internal/extint.h \
+	internal/interrupt.h \
+	internal/nonvolatile.h \
+	internal/pin.h \
+	internal/port.h \
+	internal/register.h \
+	internal/timer0.h \
+	internal/ulpwu.h \
+	internal/watchdog.h
+
+device_sources = \
+	p16f88x.cc
+
+device_headers = \
+	p16f88x.h
+
 libpic14_la_SOURCES = \
-	adc.cc \
-	core.cc \
-	data_bus.cc \
-	eprom.cc \
-	errors.cc \
-	eusart.cc \
-	execution.cc \
-	extint.cc \
-	interrupt.cc \
-	p16f88x.cc \
-	port.cc \
-	timer0.cc \
-	ulpwu.cc \
-	watchdog.cc
+	$(internal_sources) \
+	$(device_sources) \
+	errors.cc
 
 include_HEADERS = \
-	adc.h \
-	core.h \
-	data_bus.h \
-	eprom.h \
-	errors.h \
-	eusart.cc \
-	execution.h \
-	extint.h \
-	interrupt.h \
-	nonvolatile.h \
-	p16f88x.h \
-	pin.h \
-	port.h \
-	register.h \
-	timer0.h \
-	ulpwu.h \
-	watchdog.h
+	$(internal_headers) \
+	$(device_headers) \
+	errors.h
 
 check_PROGRAMS = p16f88x_test
 

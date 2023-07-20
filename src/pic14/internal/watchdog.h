@@ -1,10 +1,10 @@
-#ifndef sim_pic14_watchdog_h
-#define sim_pic14_watchdog_h
+#ifndef sim_pic14_internal_watchdog_h
+#define sim_pic14_internal_watchdog_h
 
-#include "../core/clock.h"
-#include "../core/scheduler.h"
-#include "../core/signal.h"
-#include "../core/trace.h"
+#include "../../core/clock.h"
+#include "../../core/scheduler.h"
+#include "../../core/signal.h"
+#include "../../core/trace.h"
 #include "core.h"
 #include "data_bus.h"
 #include "execution.h"
@@ -87,4 +87,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_watchdog_h
+#endif  // sim_pic14_internal_watchdog_h

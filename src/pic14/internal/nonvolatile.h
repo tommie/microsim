@@ -1,5 +1,5 @@
-#ifndef sim_pic14_nonvolatile_h
-#define sim_pic14_nonvolatile_h
+#ifndef sim_pic14_internal_nonvolatile_h
+#define sim_pic14_internal_nonvolatile_h
 
 #include <cstdint>
 
@@ -35,4 +35,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif // sim_pic14_nonvolatile_h
+#endif // sim_pic14_internal_nonvolatile_h

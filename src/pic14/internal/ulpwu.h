@@ -1,7 +1,7 @@
-#ifndef sim_pic14_ulpwu_h
-#define sim_pic14_ulpwu_h
+#ifndef sim_pic14_internal_ulpwu_h
+#define sim_pic14_internal_ulpwu_h
 
-#include "../core/device.h"
+#include "../../core/device.h"
 #include "core.h"
 #include "interrupt.h"
 #include "pin.h"
@@ -37,4 +37,4 @@ namespace sim::pic14::internal {
 
 }  // namespace sim::pic14::internal
 
-#endif  // sim_pic14_ulpwu_h
+#endif  // sim_pic14_internal_ulpwu_h

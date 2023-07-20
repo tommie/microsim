@@ -1,11 +1,11 @@
-#ifndef sim_pic14_execution_h
-#define sim_pic14_execution_h
+#ifndef sim_pic14_internal_execution_h
+#define sim_pic14_internal_execution_h
 
-#include "../core/clock.h"
-#include "../core/device.h"
-#include "../core/scheduler.h"
-#include "../core/signal.h"
-#include "../core/trace.h"
+#include "../../core/clock.h"
+#include "../../core/device.h"
+#include "../../core/scheduler.h"
+#include "../../core/signal.h"
+#include "../../core/trace.h"
 #include "data_bus.h"
 #include "interrupt.h"
 #include "nonvolatile.h"
@@ -175,4 +175,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_execution_h
+#endif  // sim_pic14_internal_execution_h

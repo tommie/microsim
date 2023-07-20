@@ -1,13 +1,13 @@
-#ifndef sim_pic14_adc_h
-#define sim_pic14_adc_h
+#ifndef sim_pic14_internal_adc_h
+#define sim_pic14_internal_adc_h
 
 #include <cstdint>
 #include <vector>
 
-#include "../core/clock.h"
-#include "../core/device.h"
-#include "../core/scheduler.h"
-#include "../core/trace.h"
+#include "../../core/clock.h"
+#include "../../core/device.h"
+#include "../../core/scheduler.h"
+#include "../../core/trace.h"
 #include "data_bus.h"
 #include "execution.h"
 #include "interrupt.h"
@@ -147,4 +147,4 @@ namespace sim::pic14 {
 
 }  // namespace sim::pic14
 
-#endif  // sim_pic14_adc_h
+#endif  // sim_pic14_internal_adc_h
