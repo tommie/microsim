@@ -1,3 +1,5 @@
+include ../common.mk
+
 lib_LTLIBRARIES = libutil.la
 
 libutil_la_SOURCES = \

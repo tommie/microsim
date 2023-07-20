@@ -1,3 +1,5 @@
+include ../common.mk
+
 lib_LTLIBRARIES = libtesting.la
 
 libtesting_la_SOURCES = testing.cc

@@ -23,6 +23,9 @@ else
 fi
 AM_CONDITIONAL([HAVE_WASM], [test -n "$have_wasm"])
 
+MORE_CXXFLAGS='-std=c++20 -Wall -Werror'
+AC_SUBST([MORE_CXXFLAGS])
+
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([
  Makefile
@@ -32,5 +35,6 @@ AC_CONFIG_FILES([
  src/pic14/testdata/Makefile
  src/testing/Makefile
  src/util/Makefile
+ src/wasm/Makefile
 ])
 AC_OUTPUT

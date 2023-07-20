@@ -1,3 +1,5 @@
+include ../common.mk
+
 SUBDIRS = testdata
 
 lib_LTLIBRARIES = libpic14.la

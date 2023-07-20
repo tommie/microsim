@@ -1,3 +1,5 @@
+include ../../common.mk
+
 GPASM_FLAGS = -p p16f887 -r dec
 
 noinst_DATA = \

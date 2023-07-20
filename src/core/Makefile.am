@@ -1,3 +1,5 @@
+include ../common.mk
+
 lib_LTLIBRARIES = libcore.la
 
 libcore_la_SOURCES = \
