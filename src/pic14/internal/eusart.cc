@@ -317,11 +317,11 @@ namespace sim::pic14::internal {
       rc_interrupt_(std::move(rc_interrupt)),
       tx_interrupt_(std::move(tx_interrupt)),
       rc_pin_([this](bool v) {
-        std::visit([this, v](auto &impl) { impl.rc_pin_changed(v); }, impl_);
+        std::visit([v](auto &impl) { impl.rc_pin_changed(v); }, impl_);
       }),
       tx_pin_(true),
       ck_pin_([this](bool v) {
-        std::visit([this, v](auto &impl) { impl.ck_pin_changed(v); }, impl_);
+        std::visit([v](auto &impl) { impl.ck_pin_changed(v); }, impl_);
       }),
       dt_pin_([](bool v) {}),
       impl_(AsyncImpl(this)),

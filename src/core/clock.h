@@ -76,19 +76,19 @@ namespace sim::core {
 
     /// Returns the simulated point-in-time for `d` ticks in the
     /// future, relative the view's current time.
-    TimePoint at(Clock::duration d) const { return clock_->at(d - delta()); }
+    TimePoint at(typename Clock::duration d) const { return clock_->at(d - delta()); }
 
     /// Resets the view's current time to `now - rem`. Invariant:
     /// `reset(delta)` is a no-op.
-    void reset(Clock::duration rem = {}) { at_ = clock_->now() - rem; }
+    void reset(typename Clock::duration rem = {}) { at_ = clock_->now() - rem; }
 
     /// Returns the current delta to the clock's now. If positive, the
     /// view's current time is in the past.
-    Clock::duration delta() const { return clock_->now() - at_; }
+    typename Clock::duration delta() const { return clock_->now() - at_; }
 
   private:
     Clock *clock_;
-    Clock::time_point at_;
+    typename Clock::time_point at_;
   };
 
   using ClockView = ClockViewBase<Clock>;

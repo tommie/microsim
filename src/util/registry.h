@@ -11,7 +11,7 @@ namespace sim::util {
   template<typename T>
   class Registry {
   public:
-    using const_iterator = std::vector<const T*>::const_iterator;
+    using const_iterator = typename std::vector<const T*>::const_iterator;
 
     static std::size_t size() { return entries().size(); }
     static const T& get(std::size_t i) { return *begin()[i]; }
@@ -29,11 +29,11 @@ namespace sim::util {
 
 /// Defines the registry. This must be invoked in global scope.
 #define DEFINE_REGISTRY(name, type)                                     \
-  template class ::sim::util::Registry<type>;                           \
   template<> std::vector<const type*>& ::sim::util::Registry<type>::entries() { \
     static std::vector<const type*> entries;                            \
     return entries;                                                     \
-  }
+  }                                                                     \
+  template class ::sim::util::Registry<type>;
 
 /// Adds a value to the named registry. The name must be unique in the
 /// scope. This may be called in any namespace.
