@@ -17,6 +17,7 @@ AC_CONFIG_FILES([
  src/Makefile
  src/core/Makefile
  src/pic14/Makefile
+ src/pic14/testdata/Makefile
  src/testing/Makefile
  src/util/Makefile
 ])
