@@ -194,6 +194,7 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
                     sim::core::SimulationClockAdvancedTraceEntry,
                     sim::core::SimulatorTraceEntry,
                     sim::pic14::ADConversionDoneTraceEntry,
+                    sim::pic14::EUSARTDataTraceEntry,
                     sim::pic14::ExecutedTraceEntry,
                     sim::pic14::WatchDogClearedTraceEntry,
                     sim::pic14::WatchDogTimedOutTraceEntry,
@@ -210,6 +211,26 @@ void dump_trace_buffer(sim::util::TraceBuffer &buf = sim::core::trace_buffer()) 
         std::cout << "Simulator   " << e.simulator() << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::ADConversionDoneTraceEntry>) {
         std::cout << "ADC Done" << std::endl;
+      } else if constexpr (std::is_same_v<T, sim::pic14::EUSARTDataTraceEntry>) {
+        std::cout << "EUSART      0x" << std::hex << e.data() << std::dec << " ";
+
+        switch (e.mode()) {
+        case sim::pic14::EUSARTDataTraceEntry::Mode::ASYNC_TRANSMIT: std::cout << "A-Tx"; break;
+        case sim::pic14::EUSARTDataTraceEntry::Mode::ASYNC_RECEIVED: std::cout << "A-Rc"; break;
+        case sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_MASTER_TRANSMIT: std::cout << "M-Tx"; break;
+        case sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_MASTER_RECEIVED: std::cout << "M-Rc"; break;
+        case sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_SLAVE_TRANSMIT: std::cout << "S-Tx"; break;
+        case sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_SLAVE_RECEIVED: std::cout << "S-Rc"; break;
+        }
+
+        if (e.num_bits() != 8) {
+          std::cout << ", " << e.num_bits() << " bits";
+        }
+
+        if (e.ferr()) {
+          std::cout << ", framing error";
+        }
+        std::cout << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::ExecutedTraceEntry>) {
         std::cout << "Executed    0x" << std::hex << e.addr() << std::dec << std::endl;
       } else if constexpr (std::is_same_v<T, sim::pic14::WatchDogClearedTraceEntry>) {
@@ -278,15 +299,17 @@ protected:
     };
 
     while (pred()) {
-      if (sim::core::is_never(sim_.advance_to(limit).next_time)) {
-        if (!pred()) {
-          return;
-        }
-
-        throw std::runtime_error("the simulation is stalled and cannot advance");
-      }
+      auto next_time = sim_.advance_to(limit).next_time;
 
       dump_trace_buffer();
+
+      if (!pred()) {
+        return;
+      }
+
+      if (sim::core::is_never(next_time)) {
+        throw std::runtime_error("the simulation is stalled and cannot advance");
+      }
     }
   }
 

@@ -7,13 +7,16 @@
 #include "../core/clock.h"
 #include "../core/device.h"
 #include "../core/scheduler.h"
+#include "../core/trace.h"
 #include "data_bus.h"
 #include "execution.h"
 #include "interrupt.h"
 #include "pin.h"
 #include "register.h"
 
-namespace sim::pic14::internal {
+namespace sim::pic14 {
+
+  namespace internal {
 
   template<typename Backend>
   class BaudCtlRegBase : public BitRegister<Backend> {
@@ -113,6 +116,7 @@ namespace sim::pic14::internal {
     public:
       void ck_pin_changed(bool v) {}
       void rc_pin_changed(bool v) {}
+      void tsr_loaded(uint16_t v, unsigned int num_bits) {}
       void write_register(uint16_t addr, uint8_t value) {}
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) { return {}; }
     };
@@ -123,6 +127,7 @@ namespace sim::pic14::internal {
 
       void ck_pin_changed(bool v) {}
       void rc_pin_changed(bool v);
+      void tsr_loaded(uint16_t v, unsigned int num_bits);
       void write_register(uint16_t addr, uint8_t value);
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
 
@@ -143,6 +148,7 @@ namespace sim::pic14::internal {
 
       void ck_pin_changed(bool v) {}
       void rc_pin_changed(bool v) {}
+      void tsr_loaded(uint16_t v, unsigned int num_bits);
       void write_register(uint16_t addr, uint8_t value);
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
 
@@ -163,6 +169,7 @@ namespace sim::pic14::internal {
 
       void ck_pin_changed(bool v);
       void rc_pin_changed(bool v) {}
+      void tsr_loaded(uint16_t v, unsigned int num_bits);
       void write_register(uint16_t addr, uint8_t value);
       sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) { return {}; }
 
@@ -265,6 +272,35 @@ namespace sim::pic14::internal {
     bool tx_reg_valid_ = false;
   };
 
-}  // namespace sim::pic14::internal
+  }  // namespace internal
+
+  class EUSARTDataTraceEntry : public sim::util::TraceEntryBase {
+  public:
+    static const sim::util::TraceEntryType<EUSARTDataTraceEntry> TYPE;
+
+    enum class Mode : uint8_t {
+      ASYNC_TRANSMIT,
+      ASYNC_RECEIVED,
+      SYNC_MASTER_TRANSMIT,
+      SYNC_MASTER_RECEIVED,
+      SYNC_SLAVE_TRANSMIT,
+      SYNC_SLAVE_RECEIVED,
+    };
+
+    EUSARTDataTraceEntry(Mode mode, uint16_t data, uint8_t num_bits)
+      : data_(data), num_bits_(num_bits), mode_(mode) {}
+
+    uint16_t data() const { return data_ & ((1u << num_bits_) - 1); }
+    bool ferr() const { return (data_ & 0x200) != 0; }
+    unsigned int num_bits() const { return num_bits_; }
+    Mode mode() const { return mode_; }
+
+  private:
+    uint16_t data_;
+    uint8_t num_bits_;
+    Mode mode_;
+  };
+
+}  // namespace sim::pic14
 
 #endif  // sim_pic14_eusart_h

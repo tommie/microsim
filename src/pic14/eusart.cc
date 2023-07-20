@@ -1,5 +1,7 @@
 #include "eusart.h"
 
+REGISTER_TRACE_ENTRY_TYPE(EUSARTDataTraceEntry, sim::pic14::EUSARTDataTraceEntry)
+
 namespace sim::pic14::internal {
 
   EUSART::AsyncImpl::AsyncImpl(EUSART *eusart)
@@ -39,6 +41,10 @@ namespace sim::pic14::internal {
       eusart_->baudctl_reg_.set_rcidl(false);
       eusart_->schedule_immediately();
     }
+  }
+
+  void EUSART::AsyncImpl::tsr_loaded(uint16_t v, unsigned int num_bits) {
+    sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::ASYNC_TRANSMIT, v, num_bits);
   }
 
   void EUSART::AsyncImpl::write_register(uint16_t addr, uint8_t value) {
@@ -96,6 +102,7 @@ namespace sim::pic14::internal {
           rsr_ |= (rsr_ << 1) & 0x200;  // Promote the last bit to FERR.
         }
 
+        sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::ASYNC_RECEIVED, rsr_ ^ 0x200, rsr_bits_ - 1);
         eusart_->push_rcreg(rsr_);
         rsr_bits_ = 0;
 
@@ -134,6 +141,10 @@ namespace sim::pic14::internal {
     eusart_->set_pin_value(&eusart_->dt_pin_, false);
     eusart_->set_pin_input(&eusart_->ck_pin_, false);
     eusart_->set_pin_input(&eusart_->dt_pin_, !eusart_->txsta_reg_.txen());
+  }
+
+  void EUSART::SyncMasterImpl::tsr_loaded(uint16_t v, unsigned int num_bits) {
+    sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::SYNC_MASTER_TRANSMIT, v, num_bits);
   }
 
   void EUSART::SyncMasterImpl::write_register(uint16_t addr, uint8_t value) {
@@ -190,6 +201,7 @@ namespace sim::pic14::internal {
             rsr_ >>= 9 - 8;
           }
 
+          sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::SYNC_MASTER_RECEIVED, rsr_, rsr_half_bits_ / 2);
           eusart_->push_rcreg(rsr_);
           rsr_half_bits_ = 0;
           rsr_ = 0;
@@ -259,12 +271,17 @@ namespace sim::pic14::internal {
             rsr_ >>= 9 - 8;
           }
 
+          sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::SYNC_SLAVE_RECEIVED, rsr_, rsr_bits_);
           eusart_->push_rcreg(rsr_);
           rsr_bits_ = 0;
           rsr_ = 0;
         }
       }
     }
+  }
+
+  void EUSART::SyncSlaveImpl::tsr_loaded(uint16_t v, unsigned int num_bits) {
+    sim::core::trace_writer().emplace<EUSARTDataTraceEntry>(EUSARTDataTraceEntry::Mode::SYNC_SLAVE_TRANSMIT, v, num_bits);
   }
 
   void EUSART::SyncSlaveImpl::write_register(uint16_t addr, uint8_t value) {
@@ -507,12 +524,14 @@ namespace sim::pic14::internal {
     if (txsta_reg_.sendb()) {
       tsr_ = 1;
       tsr_bits_ = 14;
+      std::visit([](auto &impl) { impl.tsr_loaded(0, 12); }, impl_);
     } else {
       tsr_ = tx_reg_.read() | (txsta_reg_.tx9() ? (txsta_reg_.tx9d() << 8) : 0);
       if (!txsta_reg_.sync() && baudctl_reg_.sckp())
         tsr_ ^= 0x1FF;
 
       tsr_bits_ = (txsta_reg_.tx9() ? 9 : 8);
+      std::visit([this](auto &impl) { impl.tsr_loaded(tsr_, tsr_bits_); }, impl_);
 
       if (!txsta_reg_.sync()) {
         // Add start and stop bits.
