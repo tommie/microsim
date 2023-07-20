@@ -110,13 +110,13 @@ namespace sim::pic14::internal {
   }
 
   sim::core::TimePoint EUSART::AsyncImpl::advance_tx() {
-    if (!eusart_->txsta_reg_.txen())
-      return sim::core::SimulationClock::NEVER;
-
     if (eusart_->tsr_empty()) {
       eusart_->update_tx_done();
       return sim::core::SimulationClock::NEVER;
     }
+
+    if (!eusart_->txsta_reg_.txen())
+      return sim::core::SimulationClock::NEVER;
 
     if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_)
       eusart_->set_pin_from_tsr();
