@@ -457,11 +457,16 @@ namespace sim::pic14::internal {
     } else {
       tsr_ = tx_reg_.read() | (txsta_reg_.tx9() ? (txsta_reg_.tx9d() << 8) : 0);
       if (!txsta_reg_.sync() && baudctl_reg_.sckp())
-        tsr_ ^= 0xFF;
+        tsr_ ^= 0x1FF;
 
-      tsr_ |= 1u << (txsta_reg_.tx9() ? 9 : 8);
-      tsr_ <<= 1;
-      tsr_bits_ = (txsta_reg_.tx9() ? 11 : 10);
+      tsr_bits_ = (txsta_reg_.tx9() ? 9 : 8);
+
+      if (!txsta_reg_.sync()) {
+        // Add start and stop bits.
+        tsr_ |= 1u << tsr_bits_;
+        tsr_ <<= 1;
+        tsr_bits_ += 2;
+      }
     }
 
     txsta_reg_.set_trmt(false);
