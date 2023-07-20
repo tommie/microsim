@@ -508,6 +508,15 @@ PROCESSOR_TEST(EUSARTSlaveTransmitTest, P16F887, "testdata/eusart_slave_tx.hex")
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
 }
 
+PROCESSOR_TEST(EUSARTSlaveReceiveTest, P16F887, "testdata/eusart_slave_rc.hex") {
+  spi_master.transact(std::u16string{42, 43}, 8, sim::core::Microseconds(16), sim::core::Microseconds(16));
+
+  advance_until_empty(spi_master);
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
+}
+
 int main() {
   return sim::testing::TestSuite::global().run();
 }

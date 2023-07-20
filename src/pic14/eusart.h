@@ -168,6 +168,9 @@ namespace sim::pic14::internal {
 
     private:
       EUSART *eusart_;
+
+      uint16_t rsr_ = 0;
+      int rsr_bits_ = 0;
     };
 
   public:

@@ -241,6 +241,23 @@ namespace sim::pic14::internal {
       if (eusart_->tsr_empty()) {
         eusart_->update_tx_done();
       }
+
+      if (eusart_->rcsta_reg_.cren()) {
+        // Sample data pin.
+        rsr_ >>= 1;
+        rsr_ |= (eusart_->dt_pin_.external() ? 0x100u : 0u);
+        ++rsr_bits_;
+
+        if (rsr_bits_ == (eusart_->rcsta_reg_.rx9() ? 9 : 8)) {
+          if (!eusart_->rcsta_reg_.rx9()) {
+            rsr_ >>= 9 - 8;
+          }
+
+          eusart_->push_rcreg(rsr_);
+          rsr_bits_ = 0;
+          rsr_ = 0;
+        }
+      }
     }
   }
 
