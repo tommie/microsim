@@ -208,6 +208,7 @@ namespace sim::pic14::internal {
   private:
     void update_impl();
     void update_bit_duration();
+    void update_tx_done();
 
     void push_rcreg(uint16_t v);
     uint8_t pop_rcreg();

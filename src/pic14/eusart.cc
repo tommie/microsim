@@ -110,11 +110,17 @@ namespace sim::pic14::internal {
     if (!eusart_->txsta_reg_.txen())
       return sim::core::SimulationClock::NEVER;
 
-    if (eusart_->tsr_empty())
+    if (eusart_->tsr_empty()) {
+      eusart_->update_tx_done();
       return sim::core::SimulationClock::NEVER;
+    }
 
     if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_)
       eusart_->set_pin_from_tsr();
+
+    if (eusart_->tsr_empty()) {
+      return eusart_->tx_fosc_.at(eusart_->bit_duration_ / 2);
+    }
 
     return eusart_->tx_fosc_.at(eusart_->bit_duration_);
   }
@@ -196,8 +202,13 @@ namespace sim::pic14::internal {
   }
 
   sim::core::Advancement EUSART::SyncMasterImpl::advance_tx() {
-    if (eusart_->tsr_empty())
-      return { .next_time = sim::core::SimulationClock::NEVER };
+    if (eusart_->tsr_empty()) {
+      if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_ / 2) {
+        eusart_->update_tx_done();
+        return { .next_time = sim::core::SimulationClock::NEVER };
+      }
+      return { .next_time = eusart_->tx_fosc_.at((eusart_->bit_duration_ + sim::core::Clock::duration(1)) / 2) };
+    }
 
     if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_) {
       eusart_->set_pin_from_tsr();
@@ -396,6 +407,10 @@ namespace sim::pic14::internal {
     }
   }
 
+  void EUSART::update_tx_done() {
+    txsta_reg_.update_tx_done();
+  }
+
   void EUSART::push_rcreg(uint16_t v) {
     baudctl_reg_.set_rcidl(true);
 
@@ -458,6 +473,10 @@ namespace sim::pic14::internal {
   }
 
   void EUSART::set_pin_from_tsr() {
+    if (tsr_empty()) {
+      return;
+    }
+
     set_tx_pin((tsr_ & 1) != 0);
 
     tsr_ >>= 1;
@@ -466,8 +485,6 @@ namespace sim::pic14::internal {
     if (tsr_empty()) {
       if (tx_reg_valid_) {
         load_tsr();
-      } else {
-        txsta_reg_.update_tx_done();
       }
     } else {
       tx_fosc_.reset();
