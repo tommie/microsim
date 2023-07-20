@@ -164,7 +164,7 @@ namespace sim::pic14::internal {
       void ck_pin_changed(bool v);
       void rc_pin_changed(bool v) {}
       void write_register(uint16_t addr, uint8_t value);
-      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit);
+      sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) { return {}; }
 
     private:
       EUSART *eusart_;

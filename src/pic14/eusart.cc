@@ -204,6 +204,7 @@ namespace sim::pic14::internal {
   sim::core::Advancement EUSART::SyncMasterImpl::advance_tx() {
     if (eusart_->tsr_empty()) {
       if (eusart_->tx_fosc_.delta() >= eusart_->bit_duration_ / 2) {
+        eusart_->set_pin_value(&eusart_->ck_pin_, !eusart_->baudctl_reg_.sckp());
         eusart_->update_tx_done();
         return { .next_time = sim::core::SimulationClock::NEVER };
       }
@@ -227,17 +228,43 @@ namespace sim::pic14::internal {
   EUSART::SyncSlaveImpl::SyncSlaveImpl(EUSART *eusart)
     : eusart_(eusart) {
     eusart_->set_pin_input(&eusart_->ck_pin_, true);
-    eusart_->set_pin_input(&eusart_->dt_pin_, true);
+    eusart_->set_pin_input(&eusart_->dt_pin_, !eusart_->txsta_reg_.txen());
   }
 
   void EUSART::SyncSlaveImpl::ck_pin_changed(bool v) {
+    if (v != eusart_->baudctl_reg_.sckp()) {
+      // Set data pin.
+      if (eusart_->txsta_reg_.txen()) {
+        eusart_->set_pin_from_tsr();
+      }
+    } else {
+      if (eusart_->tsr_empty()) {
+        eusart_->update_tx_done();
+      }
+    }
   }
 
   void EUSART::SyncSlaveImpl::write_register(uint16_t addr, uint8_t value) {
-  }
+    switch (addr) {
+    case 0x98:
+      if (!eusart_->txsta_reg_.txen()) {
+        eusart_->tx_interrupt_.reset();
+        eusart_->set_pin_value(&eusart_->ck_pin_, eusart_->baudctl_reg_.sckp());
+      }
+      eusart_->set_pin_input(&eusart_->dt_pin_, !eusart_->txsta_reg_.txen());
+      // The SYNC bit may have changed, so we also need to configure
+      // what RCSTA says.
 
-  sim::core::Advancement EUSART::SyncSlaveImpl::advance_to(const sim::core::AdvancementLimit &limit) {
-    return { .next_time = sim::core::SimulationClock::NEVER };
+      // fall through
+
+    case 0x18:
+      if (eusart_->rcsta_reg_.cren() || eusart_->rcsta_reg_.sren()) {
+        eusart_->schedule_immediately();
+      } else {
+        eusart_->tx_interrupt_.reset();
+      }
+      break;
+    }
   }
 
   EUSART::EUSART(sim::core::DeviceListener *listener, sim::core::ClockModifier *fosc, InterruptMux::MaskablePeripheralLevelSignal &&rc_interrupt, InterruptMux::MaskablePeripheralLevelSignal &&tx_interrupt)

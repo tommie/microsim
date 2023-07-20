@@ -122,6 +122,55 @@ private:
   sim::core::Pin *dt_pin_;
 };
 
+class SPIMaster : public sim::core::SimulationObject {
+public:
+  SPIMaster(const sim::core::SimulationClock *sim_clock, sim::core::Pin *ck_pin, sim::core::Pin *di_pin, sim::core::Pin *do_pin)
+    : sim_clock_(sim_clock),
+      ck_pin_(ck_pin), di_pin_(di_pin), do_pin_(do_pin) {
+  }
+
+  bool empty() const { return spi_->empty(); }
+  std::u16string_view data() const { return spi_->data(); }
+
+  void transact(std::u16string_view data, unsigned int num_data_bits, sim::core::Duration bit_duration, sim::core::Duration delay = {}) {
+    ck_pin_->set_external(false);
+    do_pin_->set_external(false);
+
+    spi_ = sim::testing::SPIMaster(num_data_bits, bit_duration.count(), data);
+    start_time_ = sim_clock_->now() + delay;
+    schedule_immediately();
+  }
+
+  sim::core::Advancement advance_to(const sim::core::AdvancementLimit&) override {
+    if (!spi_) return {};
+
+    if (sim_clock_->now() < start_time_)
+      return { .next_time = start_time_ };
+
+    auto [next_tick, ck, dt] = spi_->next_signal_change((sim_clock_->now() - start_time_).count(),
+                                                        di_pin_->resistance() >= 0.5 ? 0.5 : di_pin_->value());
+    ck_pin_->set_external(ck);
+    do_pin_->set_external(dt);
+
+    if (next_tick == 0) {
+      spi_.reset();
+      return {};
+    }
+
+    return {
+      .next_time = start_time_ + sim::core::Duration(next_tick),
+    };
+  }
+
+private:
+  const sim::core::SimulationClock *sim_clock_;
+  sim::core::Pin *ck_pin_;
+  sim::core::Pin *di_pin_;
+  sim::core::Pin *do_pin_;
+  std::optional<sim::testing::SPIMaster> spi_;
+  sim::core::TimePoint start_time_ = sim::core::SimulationClock::NEVER;
+};
+
 class DeviceListener : public sim::core::DeviceListener {
 public:
   void pin_changed(sim::core::Pin *pin, PinChange change) override {
@@ -195,7 +244,8 @@ public:
     : firmware_(firmware), fosc_(std::chrono::seconds(1)), proc(&listener_, &fosc_),
       pins(build_pin_descrs(proc.pins())),
       tmtr(&sim_clock(), pins["RC"]),
-      sim_(sim::core::SimulationContext({&fosc_}, {&proc, &tmtr}).make_simulator()) {
+      spi_master(&sim_clock(), pins["CK"], pins["DT"], pins["DT"]),
+      sim_(sim::core::SimulationContext({&fosc_}, {&proc, &tmtr, &spi_master}).make_simulator()) {
     listener_.sim_clock = &sim_.sim_clock();
     for (const auto &descr : proc.pins()) {
       listener_.pin_descrs[descr.pin] = descr;
@@ -233,12 +283,18 @@ protected:
           return;
         }
 
-        std::cerr << "The simulation is stalled and cannot advance." << std::endl;
-        std::abort();
+        throw std::runtime_error("the simulation is stalled and cannot advance");
       }
 
       dump_trace_buffer();
     }
+  }
+
+  template<typename T>
+  void advance_until_empty(const T &subject) {
+    advance_while([&subject]() {
+      return !subject.empty();
+    });
   }
 
   void set_nrz_receiver(NRZReceiver *rcvr) {
@@ -265,6 +321,7 @@ protected:
   Proc proc;
   std::unordered_map<std::string, sim::core::Pin*> pins;
   NRZTransmitter tmtr;
+  SPIMaster spi_master;
 
 private:
   sim::core::Simulator sim_;
@@ -432,6 +489,23 @@ PROCESSOR_TEST(EUSARTMasterReceiveTest, P16F887, "testdata/eusart_master_rc.hex"
   advance_until_sleep();
 
   if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after receive");
+}
+
+PROCESSOR_TEST(EUSARTSlaveTransmitTest, P16F887, "testdata/eusart_slave_tx.hex") {
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 0) fail("RA0 should be 0");
+
+  spi_master.transact(std::u16string{0x8000, 0x8000}, 8, sim::core::Microseconds(16));
+
+  advance_until_empty(spi_master);
+
+  if (spi_master.data()[0] != 42) fail("Byte transmitted should be 42");
+  if (spi_master.data()[1] != 43) fail("Byte transmitted should be 43");
+
+  advance_until_sleep();
+
+  if (pins["RA0"]->value() != 1) fail("RA0 should be 1 after transmit");
 }
 
 int main() {

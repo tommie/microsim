@@ -3,56 +3,86 @@
 
 #include <string>
 #include <string_view>
+#include <tuple>
 
 namespace sim::testing {
 
-  /// An SPI master transmitter and receiver.
+  /// An SPI master transmitter and receiver. It can also handle LIN Bus,
+  /// where there is only a single data line.
   class SPIMaster {
   public:
-    SPIMaster(int num_data_bits, unsigned long bit_ticks)
+    SPIMaster(SPIMaster&&) = default;
+    SPIMaster& operator =(SPIMaster&&) = default;
+
+    /// Constructs a new master. If `data[i]` has the highest bit set,
+    /// the master will receive data from the slave.
+    SPIMaster(int num_data_bits, unsigned long bit_ticks, std::u16string_view data = {})
       : num_data_bits_(num_data_bits),
-        bit_ticks_(bit_ticks) {}
+        bit_ticks_(bit_ticks),
+        data_(data) {}
 
-    bool is_receiving() const { return start_tick_ > 0; }
-    std::u16string_view received() const { return data_; }
+    bool empty() const { return bit_count_ == 8 * data_.size() && bit_ == 0; }
+    std::u16string_view data() const { return data_; }
 
-    void signal_changed(unsigned long tick, bool value) {
-      if (!is_receiving() || tick > start_tick_ + (2 + num_data_bits_) * bit_ticks_) {
-        if (!value) {
-          start_tick_ = tick;
+    std::tuple<unsigned long, double, double> next_signal_change(unsigned long tick, double dt) {
+      if (bit_count_ >= 8 * data_.size()) {
+        return {};
+      }
+
+      if (tick >= bit_count_ * bit_ticks_ + bit_ticks_ / 2) {
+        if ((data_[bit_count_ / 8] & 0x8000) != 0) {
+          // The master receives.
+          buf_ >>= 1;
+          buf_ |= (dt >= 0.5 ? 0x100 : 0);
+          ++bit_;
+
+          if (bit_ == num_data_bits_) {
+            buf_ >>= 9 - bit_;
+            data_[bit_count_ / 8] = buf_;
+          }
+
+          dt_ = 0.5;
+        }
+
+        if (bit_ == num_data_bits_) {
           bit_ = 0;
           buf_ = 0;
         }
-      } else {
-        int bits = (tick - prev_tick_ + bit_ticks_ / 2) / bit_ticks_;
 
-        if (bit_ + bits > num_data_bits_) {
-          if (value) start_tick_ = 0;
-          bits = num_data_bits_ - bit_;
+        ++bit_count_;
+        ck_ = 0;
+        return {bit_count_ * bit_ticks_, ck_, dt_};
+      } else if (tick >= bit_count_ * bit_ticks_) {
+        if ((data_[bit_count_ / 8] & 0x8000) == 0) {
+          // The master transmits.
+          if (bit_ == 0) {
+            buf_ = data_[bit_count_ / 8];
+          } else {
+            buf_ >>= 1;
+          }
+
+          ++bit_;
+          dt_ = buf_ & 1;
         }
 
-        bit_ += bits;
-        buf_ <<= bits;
-        if (prev_value_) buf_ |= (1u << bits) - 1;
-
-        if (bit_ == num_data_bits_)
-          data_.push_back(buf_);
+        ck_ = 1;
+        return {bit_count_ * bit_ticks_ + bit_ticks_ / 2, ck_, dt_};
       }
 
-      prev_tick_ = tick;
-      prev_value_ = value;
+      return {bit_count_ * bit_ticks_, ck_, dt_};
     }
 
   private:
-    const int num_data_bits_;
-    const unsigned long bit_ticks_;
+    int num_data_bits_;
+    unsigned long bit_ticks_;
 
-    unsigned long start_tick_ = 0;
-    unsigned long prev_tick_ = 0;
-    bool prev_value_;
     int bit_ = 0;
+    unsigned int bit_count_ = 0;
     uint16_t buf_ = 0;
     std::u16string data_;
+
+    double dt_ = 0;
+    double ck_ = 0;
   };
 
   /// An SPI slave transmitter and receiver.
