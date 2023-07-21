@@ -31,27 +31,26 @@ sim::util::Status load_testdata_ihex(Proc *proc, std::string_view path) {
 
 class NRZReceiver {
 public:
-  NRZReceiver(const sim::core::SimulationClock *sim_clock, sim::core::Pin *pin, unsigned int num_data_bits, sim::core::Duration bit_duration)
-    : sim_clock_(sim_clock), rcvr_(num_data_bits, bit_duration.count()), pin_(pin) {}
+  NRZReceiver(sim::core::Pin *pin, unsigned int num_data_bits, sim::core::Duration bit_duration)
+    : rcvr_(num_data_bits, bit_duration.count()), pin_(pin) {}
 
   const std::vector<uint16_t>& received() const { return rcvr_.received(); }
 
-  void pin_changed(sim::core::Pin *pin) {
+  void pin_changed(sim::core::TimePoint now, sim::core::Pin *pin) {
     if (pin != pin_) return;
 
-    rcvr_.signal_changed(sim_clock_->now().time_since_epoch().count(), pin->value());
+    rcvr_.signal_changed(now.time_since_epoch().count(), pin->value());
   }
 
 private:
-  const sim::core::SimulationClock *sim_clock_;
   sim::testing::NRZReceiver rcvr_;
   sim::core::Pin *pin_;
 };
 
 class NRZTransmitter : public sim::core::SimulationObject {
 public:
-  NRZTransmitter(const sim::core::SimulationClock *sim_clock, sim::core::Pin *pin)
-    : sim_clock_(sim_clock), pin_(pin) {
+  NRZTransmitter(sim::core::Pin *pin)
+    : clock_(sim::core::Nanoseconds(1)), pin_(pin) {
     pin->set_external(true);
   }
 
@@ -70,7 +69,7 @@ public:
     if (!tmtr_) return {};
 
     if (sim::core::is_never(tmtr_start_)) {
-      tmtr_start_ = sim_clock_->now() + delay_;
+      tmtr_start_ = clock_.at({}) + delay_;
       return { .next_time = tmtr_start_ };
     }
 
@@ -90,8 +89,10 @@ public:
     };
   }
 
+  std::vector<sim::core::Clock*> clock_sources() override { return {&clock_}; }
+
 private:
-  const sim::core::SimulationClock *sim_clock_;
+  sim::core::Clock clock_;
   sim::core::Pin *pin_;
 
   sim::core::Duration bit_duration_;
@@ -126,8 +127,8 @@ private:
 
 class SPIMaster : public sim::core::SimulationObject {
 public:
-  SPIMaster(const sim::core::SimulationClock *sim_clock, sim::core::Pin *ck_pin, sim::core::Pin *di_pin, sim::core::Pin *do_pin)
-    : sim_clock_(sim_clock),
+  SPIMaster(sim::core::Pin *ck_pin, sim::core::Pin *di_pin, sim::core::Pin *do_pin)
+    : clock_(sim::core::Nanoseconds(1)),
       ck_pin_(ck_pin), di_pin_(di_pin), do_pin_(do_pin) {
   }
 
@@ -139,17 +140,17 @@ public:
     do_pin_->set_external(false);
 
     spi_ = sim::testing::SPIMaster(num_data_bits, bit_duration.count(), data);
-    start_time_ = sim_clock_->now() + delay;
+    start_time_ = clock_.at({}) + delay;
     schedule_immediately();
   }
 
   sim::core::Advancement advance_to(const sim::core::AdvancementLimit&) override {
     if (!spi_) return {};
 
-    if (sim_clock_->now() < start_time_)
+    if (clock_.at({}) < start_time_)
       return { .next_time = start_time_ };
 
-    auto [next_tick, ck, dt] = spi_->next_signal_change((sim_clock_->now() - start_time_).count(),
+    auto [next_tick, ck, dt] = spi_->next_signal_change((clock_.at({}) - start_time_).count(),
                                                         di_pin_->resistance() >= 0.5 ? 0.5 : di_pin_->value());
     ck_pin_->set_external(ck);
     do_pin_->set_external(dt);
@@ -164,8 +165,10 @@ public:
     };
   }
 
+  std::vector<sim::core::Clock*> clock_sources() override { return {&clock_}; }
+
 private:
-  const sim::core::SimulationClock *sim_clock_;
+  sim::core::Clock clock_;
   sim::core::Pin *ck_pin_;
   sim::core::Pin *di_pin_;
   sim::core::Pin *do_pin_;
@@ -178,7 +181,7 @@ public:
   void pin_changed(sim::core::Pin *pin, PinChange change) override {
     std::cout << "  " << std::setw(6) << sim_clock->now().time_since_epoch().count() << " pin_changed " << pin_descrs[pin].name << " " << (change == PinChange::VALUE ? "value" : "res") << " " << pin->value() << ":" << (pin->resistance() < 0.5 ? "o" : "i") << std::endl;
 
-    if (nrz_rcvr_) nrz_rcvr_->pin_changed(pin);
+    if (nrz_rcvr_) nrz_rcvr_->pin_changed(sim_clock->now(), pin);
     if (spi_slave_) spi_slave_->pin_changed(pin);
   }
 
@@ -264,18 +267,21 @@ class ProcessorTestCase : public sim::testing::TestCase {
 
 public:
   ProcessorTestCase(std::string_view firmware)
-    : firmware_(firmware), fosc_(std::chrono::seconds(1)), proc(&listener_, &fosc_),
+    : firmware_(firmware),
+      fosc_(sim::core::Nanoseconds(1)),
+      proc(&listener_, &fosc_),
       pins(build_pin_descrs(proc.pins())),
-      tmtr(&sim_clock(), pins["RC"]),
-      spi_master(&sim_clock(), pins["CK"], pins["DT"], pins["DT"]),
-      sim_(sim::core::SimulationContext({&fosc_}, {&proc, &tmtr, &spi_master}).make_simulator()) {
-    listener_.sim_clock = &sim_.sim_clock();
+      tmtr(pins["RC"]),
+      spi_master(pins["CK"], pins["DT"], pins["DT"]),
+      simctx_({&fosc_}, {&proc, &tmtr, &spi_master}),
+      sim_(simctx_.make_simulator()) {
+    listener_.sim_clock = &sim_->sim_clock();
     for (const auto &descr : proc.pins()) {
       listener_.pin_descrs[descr.pin] = descr;
     }
   }
 
-  const sim::core::SimulationClock& sim_clock() const { return sim_.sim_clock(); }
+  const sim::core::Clock& fosc() const { return fosc_; }
 
 protected:
   void advance_until_sleep() {
@@ -301,7 +307,7 @@ protected:
     };
 
     while (pred()) {
-      auto next_time = sim_.advance_to(limit).next_time;
+      auto next_time = sim_->advance_to(limit).next_time;
 
       dump_trace_buffer();
 
@@ -349,7 +355,8 @@ protected:
   SPIMaster spi_master;
 
 private:
-  sim::core::Simulator sim_;
+  sim::core::SimulationContext simctx_;
+  std::unique_ptr<sim::core::Simulator> sim_;
 };
 
 #define PROCESSOR_TEST(Name, Proc, Firmware) \
@@ -456,7 +463,7 @@ PROCESSOR_TEST(ADConverterTest, P16F887, "testdata/adc.hex") {
 }
 
 PROCESSOR_TEST(EUSARTAsyncTransmitTest, P16F887, "testdata/eusart_async_tx.hex") {
-  NRZReceiver rcvr(&sim_clock(), pins["TX"], 8, sim::core::Microseconds(16));
+  NRZReceiver rcvr(pins["TX"], 8, sim::core::Microseconds(16));
   set_nrz_receiver(&rcvr);
 
   advance_until_sleep();

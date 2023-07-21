@@ -32,6 +32,12 @@ namespace sim::core {
 
     Advancement advance_to(const AdvancementLimit &limit);
 
+    // The ClockScheduler contains a pointer to sim_clock_.
+    Simulator(Simulator&&) = delete;
+    Simulator& operator =(Simulator&&) = delete;
+    Simulator(const Simulator&) = delete;
+    Simulator& operator =(const Simulator&) = delete;
+
   private:
     SimulationClock sim_clock_;
     ClockScheduler cs_;
@@ -71,7 +77,9 @@ namespace sim::core {
 
     /// Creates a simulator, borrowing object pointers from this
     /// context.
-    Simulator make_simulator() { return Simulator(clocks_, objects_); }
+    std::unique_ptr<Simulator> make_simulator() {
+      return std::make_unique<Simulator>(clocks_, objects_);
+    }
 
   private:
     std::vector<Clock*> clocks_;
