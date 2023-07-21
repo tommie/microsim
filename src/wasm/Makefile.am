@@ -13,11 +13,14 @@ microsim_LDADD = \
 
 # emcc warns about "running limited binaryen optimizations because DWARF info requested"
 # if -gsource-map is used, and -O0 doesn't stop it.
+#
+# Gotchas:
+#
+#   -sMINIMAL_RUNTIME=2 -- uses require() for Node even with MODULARIZE
 microsim_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	-sLLD_REPORT_UNDEFINED \
 	-sIGNORE_MISSING_MAIN=1 \
-	-sMINIMAL_RUNTIME=2 \
 	-sINVOKE_RUN=0 \
 	-sEXIT_RUNTIME=0 \
 	-sINCOMING_MODULE_JS_API=onAbort,onRuntimeInitialized,print,printErr \
