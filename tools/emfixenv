@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# A script to inject "Module.ENV = ENV" since ENV itself doesn't seem
+# available with MODULARIZE.
+
+exec perl -p0e 's:^\s*var\s*ENV\s*=\s*\{\s*\};$:$& Module.ENV = ENV;:ms' -i "$@"

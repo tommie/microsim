@@ -27,6 +27,8 @@ namespace sim::core {
       RESISTANCE,
     };
 
+    virtual ~DeviceListener() = default;
+
     /// Invoked when the device has encountered an unexpected invalid
     /// internal state, e.g. if the stack pointer wraps around, or
     /// writing to a register that doesn't exist. The device should

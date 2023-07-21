@@ -68,9 +68,6 @@ namespace sim::testing {
         bit_ticks_(bit_ticks),
         data_(data) {}
 
-    NRZTransmitter(NRZTransmitter&&) = default;
-    NRZTransmitter& operator =(NRZTransmitter&&) = default;
-
     bool empty() const { return data_.empty() && bit_ == 0; }
 
     /// Returns (next_tick, value), where the signal should be `value`

@@ -9,6 +9,9 @@ AM_PROG_AR
 AC_PROG_CXX
 LT_INIT
 AC_PATH_PROG([GPASM], [gpasm])
+AC_ARG_VAR([GPASM], [GnuPIC assembler])
+AC_PATH_PROG([NODE], [node])
+AC_ARG_VAR([NODE], [NodeJS interpreter])
 
 AC_MSG_CHECKING([whether the target is WASM])
 have_wasm=
@@ -17,14 +20,26 @@ wasm32-*|wasm64-*) have_wasm=yes ;;
 esac
 if test -n "$have_wasm"; then
   AC_MSG_RESULT([yes])
-  AC_DEFINE([HAVE_WASM], 1, [Whether the target is WebAssembly.])
 else
   AC_MSG_RESULT([no])
+fi
+
+MORE_LDFLAGS=
+MORE_TESTS_ENVIRONMENT=
+if test -n "$have_wasm"; then
+  AC_DEFINE([HAVE_WASM], 1, [Whether the target is WebAssembly.])
+
+  EXEEXT=.mjs
+  MORE_LDFLAGS='-Wno-limited-postlink-optimizations -sIGNORE_MISSING_MAIN=0 -sINVOKE_RUN=1 -sEXIT_RUNTIME=1 -sNODERAWFS=1'
+  MORE_TESTS_ENVIRONMENT="$NODE"
 fi
 AM_CONDITIONAL([HAVE_WASM], [test -n "$have_wasm"])
 
 MORE_CXXFLAGS='-std=c++20 -Wall -Werror'
+
 AC_SUBST([MORE_CXXFLAGS])
+AC_SUBST([MORE_LDFLAGS])
+AC_SUBST([MORE_TESTS_ENVIRONMENT])
 
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([

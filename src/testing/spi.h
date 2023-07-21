@@ -91,9 +91,6 @@ namespace sim::testing {
       : num_data_bits_(num_data_bits),
         data_(data) {}
 
-    SPISlave(SPISlave&&) = default;
-    SPISlave& operator =(SPISlave&&) = default;
-
     bool empty() const { return data_.empty() && bit_ == 0; }
     const std::vector<uint16_t>& data() const { return data_; }
 

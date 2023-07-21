@@ -41,6 +41,8 @@ namespace sim::core {
     friend class Scheduler;
 
   public:
+    virtual ~Schedulable() = default;
+
     /// Advances the object within the given limits.
     virtual Advancement advance_to(const AdvancementLimit &limit) = 0;
 
