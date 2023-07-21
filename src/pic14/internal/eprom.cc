@@ -2,8 +2,8 @@
 
 #include "execution.h"
 
-REGISTER_TRACE_ENTRY_TYPE(WroteEEDATATraceEntry, sim::pic14::WroteEEDATATraceEntry)
-REGISTER_TRACE_ENTRY_TYPE(WroteProgramFlashTraceEntry, sim::pic14::WroteProgramFlashTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(WroteEEDATATraceEntry, sim::pic14::internal::WroteEEDATATraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(WroteProgramFlashTraceEntry, sim::pic14::internal::WroteProgramFlashTraceEntry)
 
 namespace sim::pic14::internal {
 

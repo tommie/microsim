@@ -14,9 +14,7 @@
 #include "pin.h"
 #include "register.h"
 
-namespace sim::pic14 {
-
-  namespace internal {
+namespace sim::pic14::internal {
 
   template<typename Backend>
   class BaudCtlRegBase : public BitRegister<Backend> {
@@ -272,8 +270,6 @@ namespace sim::pic14 {
     std::variant<ResetImpl, AsyncImpl, SyncMasterImpl, SyncSlaveImpl> impl_;
   };
 
-  }  // namespace internal
-
   class EUSARTDataTraceEntry : public sim::util::TraceEntryBase {
   public:
     static const sim::util::TraceEntryType<EUSARTDataTraceEntry> TYPE;
@@ -301,6 +297,6 @@ namespace sim::pic14 {
     Mode mode_;
   };
 
-}  // namespace sim::pic14
+}  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_internal_eusart_h

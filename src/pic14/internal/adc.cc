@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <limits>
 
-REGISTER_TRACE_ENTRY_TYPE(ADConversionDoneTraceEntry, sim::pic14::ADConversionDoneTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(ADConversionDoneTraceEntry, sim::pic14::internal::ADConversionDoneTraceEntry)
 
 namespace sim::pic14::internal {
 

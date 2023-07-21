@@ -1,7 +1,7 @@
 #include "watchdog.h"
 
-REGISTER_TRACE_ENTRY_TYPE(WatchDogClearedTraceEntry, sim::pic14::WatchDogClearedTraceEntry)
-REGISTER_TRACE_ENTRY_TYPE(WatchDogTimedOutTraceEntry, sim::pic14::WatchDogTimedOutTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(WatchDogClearedTraceEntry, sim::pic14::internal::WatchDogClearedTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(WatchDogTimedOutTraceEntry, sim::pic14::internal::WatchDogTimedOutTraceEntry)
 
 namespace sim::pic14::internal {
 

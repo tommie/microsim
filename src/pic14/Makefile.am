@@ -33,7 +33,8 @@ internal_headers = \
 	internal/register.h \
 	internal/timer0.h \
 	internal/ulpwu.h \
-	internal/watchdog.h
+	internal/watchdog.h \
+	trace.h
 
 device_sources = \
 	p16f88x.cc

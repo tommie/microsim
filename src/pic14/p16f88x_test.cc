@@ -15,6 +15,7 @@
 #include "../testing/testing.h"
 #include "../util/status.h"
 #include "p16f88x.h"
+#include "trace.h"
 
 
 template<typename Proc>

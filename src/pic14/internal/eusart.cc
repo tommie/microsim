@@ -1,6 +1,6 @@
 #include "eusart.h"
 
-REGISTER_TRACE_ENTRY_TYPE(EUSARTDataTraceEntry, sim::pic14::EUSARTDataTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(EUSARTDataTraceEntry, sim::pic14::internal::EUSARTDataTraceEntry)
 
 namespace sim::pic14::internal {
 

@@ -156,10 +156,6 @@ namespace sim::pic14::internal {
     unsigned int inhibit_ = 0;
   };
 
-}  // namespace sim::pic14::internal
-
-namespace sim::pic14 {
-
   class ExecutedTraceEntry : public sim::util::TraceEntryBase {
   public:
     static const sim::util::TraceEntryType<ExecutedTraceEntry> TYPE;
@@ -173,6 +169,6 @@ namespace sim::pic14 {
     uint16_t addr_;
   };
 
-}  // namespace sim::pic14
+}  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_internal_execution_h

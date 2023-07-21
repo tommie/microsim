@@ -116,10 +116,6 @@ namespace sim::pic14::internal {
     std::optional<Executor::Inhibitor> inhibitor_;
   };
 
-}  // namespace sim::pic14::internal
-
-namespace sim::pic14 {
-
   class WroteEEDATATraceEntry : public sim::util::TraceEntryBase {
   public:
     static const sim::util::TraceEntryType<WroteEEDATATraceEntry> TYPE;
@@ -146,6 +142,6 @@ namespace sim::pic14 {
     uint16_t addr_;
   };
 
-}  // namespace sim::pic14
+}  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_internal_eprom_h

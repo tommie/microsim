@@ -134,10 +134,6 @@ namespace sim::pic14::internal {
     SingleRegisterBackend<uint8_t> adresh_reg_;
   };
 
-}  // namespace sim::pic14::internal
-
-namespace sim::pic14 {
-
   class ADConversionDoneTraceEntry : public sim::util::TraceEntryBase {
   public:
     static const sim::util::TraceEntryType<ADConversionDoneTraceEntry> TYPE;
@@ -145,6 +141,6 @@ namespace sim::pic14 {
     explicit ADConversionDoneTraceEntry() {}
   };
 
-}  // namespace sim::pic14
+}  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_internal_adc_h

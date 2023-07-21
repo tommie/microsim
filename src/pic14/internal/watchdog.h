@@ -10,9 +10,7 @@
 #include "execution.h"
 #include "register.h"
 
-namespace sim::pic14 {
-
-  namespace internal {
+namespace sim::pic14::internal {
 
   template<typename Backend>
   class WDTConRegBase : public BitRegister<Backend> {
@@ -69,8 +67,6 @@ namespace sim::pic14 {
     int prescaler_ = 0;
   };
 
-  }  // namespace internal
-
   class WatchDogClearedTraceEntry : public sim::util::TraceEntryBase {
   public:
     static const sim::util::TraceEntryType<WatchDogClearedTraceEntry> TYPE;
@@ -85,6 +81,6 @@ namespace sim::pic14 {
     WatchDogTimedOutTraceEntry() {}
   };
 
-}  // namespace sim::pic14
+}  // namespace sim::pic14::internal
 
 #endif  // sim_pic14_internal_watchdog_h

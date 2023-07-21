@@ -5,7 +5,7 @@
 
 using sim::util::Status;
 
-REGISTER_TRACE_ENTRY_TYPE(ExecutedTraceEntry, sim::pic14::ExecutedTraceEntry)
+REGISTER_TRACE_ENTRY_TYPE(ExecutedTraceEntry, sim::pic14::internal::ExecutedTraceEntry)
 
 namespace sim::pic14::internal {
 
