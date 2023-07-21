@@ -4,7 +4,13 @@ bin_PROGRAMS = microsim
 bin_SCRIPTS = microsim.wasm microsim.wasm.map
 CLEANFILES = $(bin_SCRIPTS)
 
-microsim_SOURCES = microsim.cc
+noinst_HEADERS = core.h util.h
+
+microsim_SOURCES = \
+	core.cc \
+	pic14.cc \
+	trace.cc \
+	util.cc
 microsim_LDADD = \
 	../pic14/libpic14.la \
 	../core/libcore.la \
