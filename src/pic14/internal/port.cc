@@ -9,7 +9,7 @@ namespace sim::pic14::internal {
   }
 
   double PortPin::resistance() const {
-    return tris_ ? NAN : 0;
+    return tris_ ? INFINITY : 0;
   }
 
   template<typename Pin>
