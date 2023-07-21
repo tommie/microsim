@@ -41,6 +41,9 @@ AC_SUBST([MORE_CXXFLAGS])
 AC_SUBST([MORE_LDFLAGS])
 AC_SUBST([MORE_TESTS_ENVIRONMENT])
 
+wwwdir='${exec_prefix}'
+AC_SUBST([wwwdir])
+
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([
  Makefile

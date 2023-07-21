@@ -1,0 +1,22 @@
+{
+  "name": "@PACKAGE_TARNAME@",
+  "version": "@PACKAGE_VERSION@",
+  "description": "An event-based microcontroller, and mixed-mode circuit, simulator using WASM.",
+  "author": "@PACKAGE_BUGREPORT@",
+  "license": "MIT",
+  "type": "module",
+  "browser": "./microsim.mjs",
+  "main": "./microsim.mjs",
+  "types": "./microsim.d.ts",
+  "exports": {
+    ".": {
+      "types": "./microsim.d.ts",
+      "import": "./microsim.mjs"
+    }
+  },
+  "files": [
+    "microsim.d.ts",
+    "microsim.wasm",
+    "microsim.wasm.map"
+  ]
+}
