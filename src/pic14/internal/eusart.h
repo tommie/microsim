@@ -252,8 +252,6 @@ namespace sim::pic14 {
     BiDiPin ck_pin_;
     BiDiPin dt_pin_;
 
-    std::variant<ResetImpl, AsyncImpl, SyncMasterImpl, SyncSlaveImpl> impl_;
-
     RCStaRegBase<SingleRegisterBackend<uint8_t>> rcsta_reg_;
     TXStaRegBase<SingleRegisterBackend<uint8_t>> txsta_reg_;
     SingleRegisterBackend<uint8_t> tx_reg_;
@@ -270,6 +268,8 @@ namespace sim::pic14 {
     uint16_t tsr_;
     int tsr_bits_ = 0;
     bool tx_reg_valid_ = false;
+
+    std::variant<ResetImpl, AsyncImpl, SyncMasterImpl, SyncSlaveImpl> impl_;
   };
 
   }  // namespace internal

@@ -324,13 +324,13 @@ namespace sim::pic14::internal {
         std::visit([v](auto &impl) { impl.ck_pin_changed(v); }, impl_);
       }),
       dt_pin_([](bool v) {}),
-      impl_(AsyncImpl(this)),
       rcsta_reg_(SingleRegisterBackend<uint8_t>(0)),
       txsta_reg_(SingleRegisterBackend<uint8_t>(0)),
       tx_reg_(0),
       spbrg_reg_(0),
       spbrgh_reg_(0),
-      baudctl_reg_(SingleRegisterBackend<uint8_t>(0)) {}
+      baudctl_reg_(SingleRegisterBackend<uint8_t>(0)),
+      impl_(AsyncImpl(this)) {}
 
   void EUSART::reset() {
     set_pin_value(&tx_pin_, true);
