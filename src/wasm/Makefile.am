@@ -21,7 +21,6 @@ microsim_LDFLAGS = \
 	-sINVOKE_RUN=0 \
 	-sEXIT_RUNTIME=0 \
 	-sINCOMING_MODULE_JS_API=onAbort,onRuntimeInitialized,print,printErr \
-	-sALLOW_MEMORY_GROWTH=1 \
 	-sALLOW_TABLE_GROWTH=1 \
 	-sFILESYSTEM=0 \
 	-sNODERAWFS=0

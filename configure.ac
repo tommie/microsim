@@ -30,7 +30,7 @@ if test -n "$have_wasm"; then
   AC_DEFINE([HAVE_WASM], 1, [Whether the target is WebAssembly.])
 
   EXEEXT=.mjs
-  MORE_LDFLAGS='-Wno-limited-postlink-optimizations -sIGNORE_MISSING_MAIN=0 -sINVOKE_RUN=1 -sEXIT_RUNTIME=1 -sNODERAWFS=1'
+  MORE_LDFLAGS='-Wno-limited-postlink-optimizations -sIGNORE_MISSING_MAIN=0 -sALLOW_MEMORY_GROWTH=1 -sINVOKE_RUN=1 -sEXIT_RUNTIME=1 -sNODERAWFS=1'
   MORE_TESTS_ENVIRONMENT="$NODE"
 fi
 AM_CONDITIONAL([HAVE_WASM], [test -n "$have_wasm"])
