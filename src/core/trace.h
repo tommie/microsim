@@ -64,6 +64,12 @@ namespace sim::core {
     const Simulator *sim_;
   };
 
+  /// Changes the trace buffer capacity, in bytes. This only affects
+  /// the construction of the global trace buffer, and it must be
+  /// called before the first time the global trace buffer is used.
+  ///
+  /// Defaults to the value of environment variable
+  /// `MICROSIM_TRACE_BUFFER_SIZE`, falling back to zero.
   void set_trace_buffer_capacity(std::size_t cap);
   sim::util::TraceBuffer& trace_buffer();
   sim::util::TraceWriter& trace_writer();
