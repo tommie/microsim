@@ -6,6 +6,7 @@
 
 #include "../core/device.h"
 #include "../pic14/p16f88x.h"
+#include "../pic14/trace.h"
 #include "util.h"
 
 using namespace emscripten;
@@ -44,6 +45,14 @@ namespace sim::wasm {
   }
 
   EMSCRIPTEN_BINDINGS(pic14) {
+
+    enum_<sim::pic14::EUSARTDataTraceEntry::Mode>("EUSARTDataTraceEntryMode")
+      .value("ASYNC_TRANSMIT", sim::pic14::EUSARTDataTraceEntry::Mode::ASYNC_TRANSMIT)
+      .value("ASYNC_RECEIVED", sim::pic14::EUSARTDataTraceEntry::Mode::ASYNC_RECEIVED)
+      .value("SYNC_MASTER_TRANSMIT", sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_MASTER_TRANSMIT)
+      .value("SYNC_MASTER_RECEIVED", sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_MASTER_RECEIVED)
+      .value("SYNC_SLAVE_TRANSMIT", sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_SLAVE_TRANSMIT)
+      .value("SYNC_SLAVE_RECEIVED", sim::pic14::EUSARTDataTraceEntry::Mode::SYNC_SLAVE_RECEIVED);
 
     class_<Pic14ICSPWrapper>("Pic14ICSP")
       .function("release", &Pic14ICSPWrapper::release)
