@@ -7,6 +7,18 @@
 
 namespace sim::wasm {
 
+  inline std::string status_message(const sim::util::Status &status) {
+    const auto &err = status.err();
+    if (!err) return "";
+
+    auto msg = err.message();
+    auto context = status.context();
+
+    if (context.empty()) return msg;
+
+    return std::string(context) + ": " + msg;
+  }
+
   struct StatusWrapper {
     StatusWrapper() = default;
     StatusWrapper(const sim::util::Status &status)

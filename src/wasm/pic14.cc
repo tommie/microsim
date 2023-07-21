@@ -28,12 +28,20 @@ namespace {
       icsp_.reset();
     }
 
-    StatusWrapper loadProgram(uint16_t addr, val data) {
-      return StatusWrapper(icsp_->load_program(addr, convertJSArrayToNumberVector<uint8_t>(data)));
+    void loadProgram(uint16_t addr, val data) {
+      auto status = icsp_->load_program(addr, convertJSArrayToNumberVector<uint8_t>(data));
+
+      if (!status.ok()) {
+        val::global("Error").new_(status_message(status)).throw_();
+      }
     }
 
-    StatusWrapper loadData(uint16_t addr, val data) {
-      return StatusWrapper(icsp_->load_data(addr, convertJSArrayToNumberVector<uint8_t>(data)));
+    void loadData(uint16_t addr, val data) {
+      auto status = icsp_->load_data(addr, convertJSArrayToNumberVector<uint8_t>(data));
+
+      if (!status.ok()) {
+        val::global("Error").new_(status_message(status)).throw_();
+      }
     }
 
   private:
