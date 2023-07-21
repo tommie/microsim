@@ -67,6 +67,15 @@ namespace {
     sim::core::Advancement advance_to(const sim::core::AdvancementLimit &limit) override {
       return call<sim::core::Advancement>("advanceTo", limit);
     }
+
+    std::vector<sim::core::Clock*> clock_sources() override {
+      std::vector<sim::core::Clock*> clocks;
+      for (const val &v : vecFromJSArray<val>(call<val>("getClockSources"))) {
+        clocks.push_back(v.as<sim::core::Clock*>(allow_raw_pointers()));
+      }
+
+      return clocks;
+    }
   };
 
   double Advancement_nextTime(const sim::core::Advancement &self) {
@@ -111,6 +120,11 @@ namespace {
     return std::make_unique<sim::core::Clock>(std::chrono::duration_cast<sim::core::Duration>(jsms(ival)));
   }
 
+  double Clock_at(const sim::core::Clock &self, long at) {
+    auto tp = self.at(sim::core::Clock::duration(at));
+    return std::chrono::time_point_cast<jsms>(tp).time_since_epoch().count();
+  }
+
   double Clock_interval(const sim::core::Clock &self) {
     return std::chrono::duration_cast<jsms>(self.interval()).count();
   }
@@ -131,6 +145,10 @@ namespace {
     return self.pin;
   }
 
+  sim::util::TraceBuffer* TraceBuffer_getGlobal() {
+    return &sim::core::trace_buffer();
+  }
+
 EMSCRIPTEN_BINDINGS(util) {
 
   value_object<StatusWrapper>("Status")
@@ -142,7 +160,40 @@ EMSCRIPTEN_BINDINGS(util) {
 
   register_vector<std::string>("Strings");
 
+  class_<sim::util::TraceBuffer>("TraceBuffer")
+    .class_function("setGlobalCapacity", &sim::core::set_trace_buffer_capacity)
+    .class_function("getGlobal", &TraceBuffer_getGlobal, allow_raw_pointers())
+    .property("capacity", &sim::util::TraceBuffer::capacity)
+    .property("discarded", &sim::util::TraceBuffer::discarded)
+    .property("length", &sim::util::TraceBuffer::entries)
+    .property("top", &sim::util::TraceBuffer::top)
+    .function("pop", &sim::util::TraceBuffer::pop);
+
 }
+
+  val TraceEntry_getDecoded(sim::util::TraceEntry &self) {
+    return self.visit<
+      sim::core::ClockAdvancedTraceEntry,
+      sim::core::SimulationClockAdvancedTraceEntry
+      >([](const auto &e) {
+        using T = std::decay_t<decltype(e)>;
+        if constexpr (std::is_same_v<T, sim::core::ClockAdvancedTraceEntry>) {
+          return val(std::make_unique<sim::core::ClockAdvancedTraceEntry>(e));
+        } else if constexpr (std::is_same_v<T, sim::core::SimulationClockAdvancedTraceEntry>) {
+          return val(std::make_unique<sim::core::SimulationClockAdvancedTraceEntry>(e));
+        } else {
+          return val::null();
+        }
+      });
+  }
+
+  double ClockAdvancedTraceEntry_now(const sim::core::ClockAdvancedTraceEntry &self) {
+    return to_jstime(sim::core::TimePoint(self.now().time_since_epoch().count() * self.clock()->interval()));
+  }
+
+  double SimulationClockAdvancedTraceEntry_now(const sim::core::SimulationClockAdvancedTraceEntry &self) {
+    return to_jstime(self.now());
+  }
 
 EMSCRIPTEN_BINDINGS(core) {
 
@@ -162,6 +213,7 @@ EMSCRIPTEN_BINDINGS(core) {
     .constructor(&newClock)
     .property("interval", &Clock_interval)
     .property("now", &Clock_now)
+    .function("at", &Clock_at)
     .function("advanceTo", &Clock_advanceTo);
 
   class_<sim::core::DeviceListener>("DeviceListener")
@@ -194,41 +246,23 @@ EMSCRIPTEN_BINDINGS(core) {
     .function("makeSimulator", &sim::core::SimulationContext::make_simulator);
 
   class_<sim::core::SimulationObject, base<sim::core::Schedulable>>("SimulationObject")
-    .allow_subclass<SimulationObjectWrapper>("SimulationObjectWrapper", constructor<>());
+    .allow_subclass<SimulationObjectWrapper>("SimulationObjectWrapper", constructor<>())
+    .function("getClockSources", &sim::core::SimulationObject::clock_sources);
 
   class_<sim::core::Simulator>("Simulator")
     .function("advanceTo", &sim::core::Simulator::advance_to);
 
-#if 0
-  class_<sim::core::TraceBuffer>("TraceBuffer")
-    .class_property("setGlobalTraceBufferCapacity", &sim::core::setTraceBufferCapacity)
-    .class_property("global", &sim::core::trace_buffer)
-    .property("empty", &sim::core::TraceBuffer::empty)
-    .function("pop", &sim::core::TraceBuffer::pop)
-    .property("top", &sim::core::TraceBuffer::top)
-    .property("length", &sim::core::TraceBuffer::entries)
-    .property("discarded", &sim::core::TraceBuffer::discarded);
-
-  class_<sim::core::TraceEntry>("TraceEntry")
-    .property("kind", &sim::core::TraceEntry::kind)
-    .function("getDecoded", [](sim::core::TraceEntry &self){
-      self.visit<
-        sim::core::ClockAdvancedTraceEntry,
-        >([](const auto &e) {
-          using T = std::decay_t<decltype(e)>;
-          if constexpr (std::is_same_v<T, sim::core::ClockAdvancedTraceEntry>) {
-            return val(std::make_unique<sim::core::ClockAdvancedTraceEntry>(e));
-          } else {
-            return val::null();
-          }
-        });
-    });
+  class_<sim::util::TraceEntry>("TraceEntry")
+    .property("kind", &sim::util::TraceEntry::kind)
+    .function("getDecoded", &TraceEntry_getDecoded);
 
   // --- Core Trace Entries ---
 
   class_<sim::core::ClockAdvancedTraceEntry, base<sim::util::TraceEntryBase>>("ClockAdvancedTraceEntry")
-    .property("now", &sim::core::ClockAdvancedTraceEntry::now);
-#endif
+    .property("now", &ClockAdvancedTraceEntry_now);
+
+  class_<sim::core::SimulationClockAdvancedTraceEntry, base<sim::util::TraceEntryBase>>("SimulationClockAdvancedTraceEntry")
+    .property("now", &SimulationClockAdvancedTraceEntry_now);
 
   register_vector<sim::core::PinDescriptor>("PinDescriptors");
 

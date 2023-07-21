@@ -1,15 +1,21 @@
 "use strict";
 
 import * as assert from "node:assert";
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 
 import loadMicrosim_ from "./microsim.mjs";
 
-function loadMicrosim(timeoutMS) {
-  return loadMicrosim_({
+async function loadMicrosim(timeoutMS) {
+  const microsim = await loadMicrosim_({
     print: console.log,
     printErr: console.error,
   });
+
+  // This must be set before the first time the trace buffer is
+  // requested.
+  microsim.TraceBuffer.setGlobalCapacity(1 << 10);
+
+  return microsim;
 }
 
 function vectorToArray(v) {
@@ -18,6 +24,13 @@ function vectorToArray(v) {
     out.push(v.get(i));
   }
   return out;
+}
+
+function logTraceBuffer(buffer) {
+  while (buffer.length > 0) {
+    console.log("Trace: ", buffer.top.getDecoded());
+    buffer.pop();
+  }
 }
 
 test("microsim", async () => {
@@ -62,6 +75,24 @@ test("core", async () => {
 
     assert.equal(adv.nextTime, Infinity);
   });
+
+  await test("TraceBuffer can be used", () => {
+    const buffer = microsim.TraceBuffer.getGlobal();
+    while (buffer.length) {
+      buffer.pop();
+    }
+
+    const clock = new microsim.Clock(1);
+    clock.advanceTo(42);
+
+    assert.equal(buffer.discarded, 0, "bad TraceBuffer.discarded");
+    assert.equal(buffer.length, 1, "bad TraceBuffer.length");
+
+    const entry = buffer.top.getDecoded();
+    assert.ok(entry instanceof microsim.ClockAdvancedTraceEntry);
+    assert.equal(entry.now, 42);
+    buffer.pop();
+  });
 });
 
 test("pic14", async () => {
@@ -90,6 +121,8 @@ test("pic14", async () => {
 
     return sim;
   }
+
+  //afterEach(() => logTraceBuffer(microsim.TraceBuffer.getGlobal()));
 
   await test("P16F887 basics work", async () => {
     const invalidInternalStates = [];
