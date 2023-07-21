@@ -31,3 +31,7 @@ microsim_LDFLAGS = \
 # https://www.gnu.org/software//automake/manual/html_node/Multiple-Outputs.html
 microsim.wasm: microsim$(EXEEXT)
 microsim.wasm.map: microsim$(EXEEXT)
+
+check-local:
+	[ "x$(builddir)" = "x$(srcdir)" ] || cp $(srcdir)/microsim_test.mjs $(builddir)/microsim_test.mjs
+	node --test ./microsim_test.mjs
