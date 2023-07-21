@@ -5,8 +5,9 @@
 #include <emscripten/bind.h>
 
 using namespace emscripten;
+using namespace sim::wasm;
 
-namespace sim::wasm {
+namespace {
 
   EMSCRIPTEN_BINDINGS(util) {
 
@@ -19,4 +20,4 @@ namespace sim::wasm {
 
   }
 
-}  // namespace sim::wasm
+}  // namespace

@@ -10,8 +10,9 @@
 #include "util.h"
 
 using namespace emscripten;
+using namespace sim::wasm;
 
-namespace sim::wasm {
+namespace {
 
   // This wrapper works around that RAII doesn't work from JS. We need
   // to release ICSP explicitly, so adding a release function.
@@ -66,4 +67,4 @@ namespace sim::wasm {
 
   }
 
-}  // namespace sim::wasm
+}  // namespace

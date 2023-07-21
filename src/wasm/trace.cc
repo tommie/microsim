@@ -9,8 +9,9 @@
 #include "util.h"
 
 using namespace emscripten;
+using namespace sim::wasm;
 
-namespace sim::wasm {
+namespace {
 
   sim::util::TraceBuffer* TraceBuffer_getGlobal() {
     return &sim::core::trace_buffer();
@@ -126,4 +127,4 @@ namespace sim::wasm {
 
   }
 
-}  // namespace sim::wasm
+}  // namespace

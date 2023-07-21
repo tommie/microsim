@@ -12,8 +12,9 @@
 #include "util.h"
 
 using namespace emscripten;
+using namespace sim::wasm;
 
-namespace sim::wasm {
+namespace {
 
   class DeviceListenerWrapper : public wrapper<sim::core::DeviceListener> {
   public:
@@ -174,4 +175,4 @@ namespace sim::wasm {
 
   }
 
-}  // namespace sim::wasm
+}  // namespace
